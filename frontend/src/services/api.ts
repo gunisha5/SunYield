@@ -41,7 +41,7 @@ api.interceptors.request.use(
     console.log('[DEBUG] API Request - User Token:', userToken ? 'Present' : 'Not present');
     
     // Only use admin token for admin-specific endpoints
-    if (adminToken && config.url && config.url.startsWith('/admin')) {
+    if (adminToken && config.url && (config.url.startsWith('/admin') || config.url.includes('/admin/'))) {
       config.headers.Authorization = `Bearer ${adminToken}`;
       console.log('[DEBUG] API Request - Using Admin Token for admin endpoint');
     } else if (userToken) {
@@ -107,6 +107,13 @@ export const projectsAPI = {
   
   pauseProject: (id: number) =>
     api.patch<Project>(`/api/projects/admin/${id}/pause`),
+  
+  uploadProjectImage: (projectId: number, formData: FormData) =>
+    api.post<string>(`/api/projects/admin/${projectId}/image`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
 };
 
 // Subscriptions API

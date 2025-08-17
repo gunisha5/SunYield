@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import api from '../services/api';
+import { projectsAPI } from '../services/api';
 
 interface ProjectImageUploadProps {
   projectId: number;
@@ -93,11 +93,7 @@ const ProjectImageUpload: React.FC<ProjectImageUploadProps> = ({
       const formData = new FormData();
       formData.append('image', selectedFile);
 
-      const response = await api.post(`/api/projects/admin/${projectId}/image`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await projectsAPI.uploadProjectImage(projectId, formData);
 
       if (response.status === 200) {
         const imageUrl = response.data;
