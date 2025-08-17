@@ -32,6 +32,12 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String requestURI = request.getRequestURI();
         
+        // Skip JWT filter for OPTIONS requests (CORS preflight)
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            chain.doFilter(request, response);
+            return;
+        }
+        
         // Skip JWT filter for public endpoints
         if (isPublicEndpoint(requestURI)) {
             chain.doFilter(request, response);
@@ -92,6 +98,8 @@ public class JwtFilter extends OncePerRequestFilter {
                requestURI.startsWith("/swagger-ui/") ||
                requestURI.startsWith("/v3/api-docs") ||
                requestURI.equals("/swagger-ui.html") ||
-               requestURI.equals("/api/energy/record");
+               requestURI.equals("/api/energy/record") ||
+               requestURI.equals("/api/projects/active") ||
+               requestURI.startsWith("/api/projects/images/");
     }
 } 

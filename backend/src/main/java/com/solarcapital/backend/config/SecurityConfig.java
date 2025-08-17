@@ -54,9 +54,15 @@ public class SecurityConfig {
         configuration.addAllowedOrigin("http://127.0.0.1:3001"); // Alternative test page URL
         configuration.addAllowedOrigin("http://localhost:3002"); // Additional dev port
         configuration.addAllowedOrigin("http://127.0.0.1:3002"); // Additional dev port
+        configuration.addAllowedOrigin("http://13.235.242.67"); // EC2 IP
+        configuration.addAllowedOrigin("http://13.235.242.67:80"); // EC2 IP with port
+        configuration.addAllowedOrigin("http://13.235.242.67:3000"); // EC2 IP with frontend port
         configuration.addAllowedMethod("*"); // Allow all HTTP methods
         configuration.addAllowedHeader("*"); // Allow all headers
+        configuration.addExposedHeader("Authorization"); // Expose Authorization header
+        configuration.addExposedHeader("Content-Type"); // Expose Content-Type header
         configuration.setAllowCredentials(true); // Allow credentials (cookies, authorization headers)
+        configuration.setMaxAge(3600L); // Cache preflight response for 1 hour
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
