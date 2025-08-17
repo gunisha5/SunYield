@@ -66,8 +66,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (token: string, userData: User) => {
     try {
       setIsLoading(true);
+      console.log('[DEBUG] AuthContext - Logging in user:', userData.email, 'ID:', userData.id);
+      console.log('[DEBUG] AuthContext - Token before login:', localStorage.getItem('token'));
       localStorage.setItem('token', token);
+      console.log('[DEBUG] AuthContext - Token after login:', localStorage.getItem('token'));
       setUser(userData);
+      console.log('[DEBUG] AuthContext - User state set to:', userData.email);
     } catch (error: any) {
       const message = error.response?.data || 'Login failed';
       toast.error(message);
@@ -113,8 +117,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const verifyOtp = async (email: string, otp: string) => {
     try {
       setIsLoading(true);
-      await authAPI.verifyOtp({ email, otp });
-      toast.success('OTP verified successfully! You can now login.');
+      const response = await authAPI.verifyOtp({ email, otp });
+      const { token, user } = response.data;
+      
+      console.log('[DEBUG] AuthContext - verifyOtp response user data:', JSON.stringify(user, null, 2));
+      
+      await login(token, user);
+      toast.success('OTP verified successfully! You are now logged in.');
     } catch (error: any) {
       const message = error.response?.data || 'OTP verification failed';
       toast.error(message);
@@ -125,7 +134,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    console.log('[DEBUG] AuthContext - Logging out user:', user?.email);
+    console.log('[DEBUG] AuthContext - Token before logout:', localStorage.getItem('token'));
     localStorage.removeItem('token');
+    console.log('[DEBUG] AuthContext - Token after logout:', localStorage.getItem('token'));
     setUser(null);
     toast.success('Logged out successfully');
   };

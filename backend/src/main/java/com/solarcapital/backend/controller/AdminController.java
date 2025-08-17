@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @RestController
 @RequestMapping("/admin")
@@ -57,10 +58,10 @@ public class AdminController {
     private BigDecimal getUserAvailableCredits(User user) {
         BigDecimal balance = BigDecimal.ZERO;
         
-        // Add rewards (earnings)
-        List<RewardHistory> rewards = rewardHistoryRepository.findAll();
+        // Add rewards (earnings) - use user-specific query
+        List<RewardHistory> rewards = rewardHistoryRepository.findByUser(user);
         for (RewardHistory reward : rewards) {
-            if (reward.getUser().getId().equals(user.getId()) && "SUCCESS".equals(reward.getStatus())) {
+            if ("SUCCESS".equals(reward.getStatus())) {
                 if (reward.getRewardAmount() != null) {
                     balance = balance.add(reward.getRewardAmount());
                 }
@@ -125,6 +126,32 @@ public class AdminController {
         return ResponseEntity.ok(response);
     }
     
+    // Test endpoint to check admin authentication
+    @GetMapping("/test-auth")
+    public ResponseEntity<?> testAuth() {
+        System.out.println("[DEBUG] Test auth endpoint called");
+        System.out.println("[DEBUG] Authentication: " + SecurityContextHolder.getContext().getAuthentication());
+        
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            System.out.println("[DEBUG] Principal: " + principal);
+            
+            if (principal instanceof User) {
+                User user = (User) principal;
+                System.out.println("[DEBUG] User email: " + user.getEmail());
+                System.out.println("[DEBUG] User role: " + user.getRole());
+                
+                if (user.getRole() == Role.ADMIN) {
+                    return ResponseEntity.ok("Admin authentication successful");
+                } else {
+                    return ResponseEntity.status(403).body("Not an admin user");
+                }
+            }
+        }
+        
+        return ResponseEntity.status(401).body("No authentication found");
+    }
+    
     // Temporary endpoint to generate password hash (remove in production)
     @GetMapping("/generate-hash")
     public ResponseEntity<?> generateHash(@RequestParam String password) {
@@ -139,6 +166,10 @@ public class AdminController {
     
     @GetMapping("/users")
     public ResponseEntity<?> getAllUsers() {
+        // Debug: Log authentication info
+        System.out.println("[DEBUG] Get all users requested");
+        System.out.println("[DEBUG] Authentication: " + SecurityContextHolder.getContext().getAuthentication());
+        
         List<User> users = userRepository.findAll();
         return ResponseEntity.ok(users);
     }
@@ -251,12 +282,20 @@ public class AdminController {
     @GetMapping("/kyc/pending")
     public ResponseEntity<?> getPendingKyc() {
         List<KYC> pendingKyc = kycRepository.findByStatus(KYCStatus.PENDING);
+        
+        // Sort by ID descending (most recent first, since IDs are auto-incrementing)
+        pendingKyc.sort((k1, k2) -> k2.getId().compareTo(k1.getId()));
+        
         return ResponseEntity.ok(pendingKyc);
     }
     
     @GetMapping("/kyc/all")
     public ResponseEntity<?> getAllKyc() {
         List<KYC> allKyc = kycRepository.findAll();
+        
+        // Sort by ID descending (most recent first, since IDs are auto-incrementing)
+        allKyc.sort((k1, k2) -> k2.getId().compareTo(k1.getId()));
+        
         return ResponseEntity.ok(allKyc);
     }
     
@@ -288,19 +327,16 @@ public class AdminController {
         String emailSubject = "Funds Added to Your Wallet";
         String emailBody = String.format(
             "Dear %s,\n\n" +
-            "Your wallet has been credited with ₹%s.\n\n" +
-            "Transaction Details:\n" +
-            "- Amount: ₹%s\n" +
-            "- Type: Admin Credit\n" +
-            "- Date: %s\n" +
-            "- Notes: %s\n\n" +
-            "Your new wallet balance will be updated in your dashboard. You can now use these funds to invest in solar projects or withdraw them.\n\n" +
+            "₹%s has been added to your wallet.\n\n" +
+            "Amount: ₹%s\n" +
+            "Date: %s\n" +
+            "Notes: %s\n\n" +
             "Thank you for choosing Solar Capital!\n\n" +
             "Best regards,\nSolar Capital Team",
             user.getFullName(),
             amount.toString(),
             amount.toString(),
-            LocalDateTime.now().toString(),
+            LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm")),
             notes != null ? notes : "No additional notes"
         );
         
@@ -321,49 +357,114 @@ public class AdminController {
         }
         
         double energyProduced = Double.parseDouble(req.get("energyProduced").toString());
-        String date = (String) req.get("date");
+        String dateStr = (String) req.get("date");
         Project project = projectOpt.get();
+        
+        // Format the date properly - handle multiple date formats
+        String formattedDate;
+        java.time.LocalDate parsedDate;
+        try {
+            // Try different date formats
+            if (dateStr.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                // ISO format: 2025-08-12
+                parsedDate = java.time.LocalDate.parse(dateStr);
+            } else if (dateStr.matches("\\d{2}/\\d{2}/\\d{4}")) {
+                // US format: 08/12/2025
+                parsedDate = java.time.LocalDate.parse(dateStr, java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy"));
+            } else if (dateStr.matches("\\d{2}-\\d{2}-\\d{4}")) {
+                // DD-MM-YYYY format: 12-08-2025
+                parsedDate = java.time.LocalDate.parse(dateStr, java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+            } else {
+                // Try default ISO format
+                parsedDate = java.time.LocalDate.parse(dateStr);
+            }
+            formattedDate = parsedDate.format(java.time.format.DateTimeFormatter.ofPattern("dd MMMM yyyy"));
+        } catch (Exception e) {
+            // Fallback to current date if parsing fails
+            parsedDate = java.time.LocalDate.now();
+            formattedDate = parsedDate.format(java.time.format.DateTimeFormatter.ofPattern("dd MMMM yyyy"));
+            System.out.println("[WARNING] Date parsing failed for: " + dateStr + ", using current date");
+        }
+        
+        // Check for existing rewards for this project, month, and year to prevent duplicates
+        int month = parsedDate.getMonthValue();
+        int year = parsedDate.getYear();
+        
+        // Check for existing rewards for this project, month, and year to prevent duplicates
+        // Only block if there are already rewards for this exact date and project
+        List<RewardHistory> existingRewards = rewardHistoryRepository.findByProjectAndMonthAndYear(project, month, year);
+        if (!existingRewards.isEmpty()) {
+            // Check if this is the same day (for daily energy entries) or if it's a monthly summary
+            // For now, we'll allow multiple entries per month as long as they're not the exact same energy amount
+            boolean hasExactDuplicate = false;
+            for (RewardHistory existing : existingRewards) {
+                // Check if any user already received a reward for this exact energy amount
+                if (Math.abs(existing.getKWh() - energyProduced) < 0.01) {
+                    hasExactDuplicate = true;
+                    break;
+                }
+            }
+            
+            if (hasExactDuplicate) {
+                return ResponseEntity.badRequest().body("Energy rewards for " + project.getName() + " for " + formattedDate + " have already been processed. Duplicate rewards are not allowed.");
+            }
+        }
         
         int usersRewarded = 0;
         BigDecimal totalRewardsDistributed = BigDecimal.ZERO;
         
+        System.out.println("[DEBUG] Processing energy rewards for project: " + project.getName() + " - " + energyProduced + " kWh on " + formattedDate);
+        
         // Create reward history entry for all users subscribed to this project
         List<Subscription> subscriptions = subscriptionRepository.findByProject(project);
-        for (Subscription sub : subscriptions) {
-            if ("SUCCESS".equals(sub.getPaymentStatus())) {
-                BigDecimal rewardAmount = new BigDecimal(energyProduced * 10); // ₹10 per kWh
+        
+        // Filter only successful subscriptions
+        List<Subscription> successfulSubscriptions = subscriptions.stream()
+            .filter(sub -> "SUCCESS".equals(sub.getPaymentStatus()))
+            .collect(java.util.stream.Collectors.toList());
+            
+        System.out.println("[DEBUG] Found " + successfulSubscriptions.size() + " active subscriptions for this project");
+            
+        if (successfulSubscriptions.isEmpty()) {
+            return ResponseEntity.badRequest().body("No active subscriptions found for project " + project.getName());
+        }
+        
+        // Calculate total investment in this project
+        BigDecimal totalProjectInvestment = project.getSubscriptionPrice().multiply(new BigDecimal(successfulSubscriptions.size()));
+        
+        for (Subscription sub : successfulSubscriptions) {
+            // Calculate reward based on user's investment proportion
+            // Each user gets a share of the total energy production based on their investment amount
+            BigDecimal userInvestment = project.getSubscriptionPrice(); // Each subscription costs the same
+            BigDecimal userShare = userInvestment.divide(totalProjectInvestment, 4, BigDecimal.ROUND_HALF_UP);
+            BigDecimal userEnergyShare = new BigDecimal(energyProduced).multiply(userShare);
+            BigDecimal rewardAmount = userEnergyShare.multiply(new BigDecimal("5")); // ₹5 per kWh
                 
                 RewardHistory reward = new RewardHistory();
                 reward.setUser(sub.getUser());
                 reward.setProject(project);
-                reward.setKWh(energyProduced);
+                reward.setKWh(userEnergyShare.doubleValue());
                 reward.setRewardAmount(rewardAmount);
                 reward.setStatus("SUCCESS");
                 reward.setReason("Energy production reward for " + project.getName());
-                reward.setMonth(java.time.LocalDate.now().getMonthValue());
-                reward.setYear(java.time.LocalDate.now().getYear());
+                reward.setMonth(month);
+                reward.setYear(year);
                 rewardHistoryRepository.save(reward);
                 
                 // Send email notification to user
-                String emailSubject = "Energy Reward Added - " + project.getName();
+                String emailSubject = "Energy Reward - " + project.getName();
                 String emailBody = String.format(
                     "Dear %s,\n\n" +
-                    "Great news! Your solar investment in %s has generated %s kWh of energy.\n\n" +
-                    "Reward Details:\n" +
-                    "- Project: %s\n" +
-                    "- Energy Generated: %s kWh\n" +
-                    "- Reward Amount: ₹%s\n" +
-                    "- Date: %s\n\n" +
-                    "Your reward has been added to your wallet balance. You can now withdraw these funds or reinvest them in other projects.\n\n" +
+                    "Your solar investment in %s has generated %.2f kWh of energy (your share).\n\n" +
+                    "Reward: ₹%.2f\n" +
+                    "Date: %s\n\n" +
                     "Thank you for investing in solar energy!\n\n" +
                     "Best regards,\nSolar Capital Team",
                     sub.getUser().getFullName(),
                     project.getName(),
-                    energyProduced,
-                    project.getName(),
-                    energyProduced,
-                    rewardAmount.toString(),
-                    date
+                    userEnergyShare.doubleValue(), // Show user's actual share
+                    rewardAmount.doubleValue(),
+                    LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm"))
                 );
                 
                 emailService.sendEmail(sub.getUser().getEmail(), emailSubject, emailBody);
@@ -371,21 +472,22 @@ public class AdminController {
                 usersRewarded++;
                 totalRewardsDistributed = totalRewardsDistributed.add(rewardAmount);
                 
-                System.out.println("[DEBUG] Reward sent to user " + sub.getUser().getEmail() + ": ₹" + rewardAmount);
-            }
+                System.out.println("[DEBUG] Energy reward sent to user " + sub.getUser().getEmail() + ": ₹" + rewardAmount + " for " + userEnergyShare.doubleValue() + " kWh (share of " + energyProduced + " kWh total, ₹5/kWh rate) on " + formattedDate);
         }
         
         String responseMessage = String.format(
             "Energy data added successfully!\n" +
             "- Project: %s\n" +
-            "- Energy Generated: %s kWh\n" +
+            "- Energy Generated: %.2f kWh\n" +
             "- Users Rewarded: %d\n" +
-            "- Total Rewards Distributed: ₹%s\n" +
-            "- Email notifications sent to all users",
+            "- Total Rewards Distributed: ₹%.2f (₹5/kWh rate)\n" +
+            "- Email notifications sent to all users\n" +
+            "- Date: %s",
             project.getName(),
             energyProduced,
             usersRewarded,
-            totalRewardsDistributed.toString()
+            totalRewardsDistributed.doubleValue(),
+            formattedDate
         );
         
         return ResponseEntity.ok(responseMessage);
@@ -437,36 +539,78 @@ public class AdminController {
     @GetMapping("/subscriptions/pending")
     public ResponseEntity<?> getPendingSubscriptions() {
         List<Subscription> allSubscriptions = subscriptionRepository.findAll();
+        
+        // Sort by subscribedAt date descending (most recent first)
+        allSubscriptions.sort((s1, s2) -> {
+            if (s1.getSubscribedAt() == null && s2.getSubscribedAt() == null) return 0;
+            if (s1.getSubscribedAt() == null) return 1;
+            if (s2.getSubscribedAt() == null) return -1;
+            return s2.getSubscribedAt().compareTo(s1.getSubscribedAt());
+        });
+        
         return ResponseEntity.ok(allSubscriptions);
     }
     
-    @PostMapping("/subscriptions/{orderId}/approve")
-    public ResponseEntity<?> approveSubscription(@PathVariable String orderId) {
-        Optional<Subscription> subscriptionOpt = subscriptionRepository.findAll().stream()
-                .filter(s -> orderId.equals(s.getPaymentOrderId()))
-                .findFirst();
+    // Get all subscription transactions (for admin monitoring)
+    @GetMapping("/subscriptions/transactions")
+    public ResponseEntity<?> getAllSubscriptionTransactions() {
+        List<CreditTransferLog> transactions = creditTransferLogRepository.findAll().stream()
+                .filter(t -> "SUBSCRIPTION".equals(t.getType()))
+                .sorted((t1, t2) -> t2.getDate().compareTo(t1.getDate())) // Most recent first
+                .collect(java.util.stream.Collectors.toList());
         
-        if (subscriptionOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body("Subscription not found");
+        return ResponseEntity.ok(transactions);
+    }
+    
+    // Get user investment history (for admin monitoring)
+    @GetMapping("/users/{userId}/investments")
+    public ResponseEntity<?> getUserInvestmentHistory(@PathVariable Long userId) {
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("User not found");
         }
         
-        Subscription subscription = subscriptionOpt.get();
-        subscription.setPaymentStatus("SUCCESS");
-        subscription.setSubscribedAt(LocalDateTime.now());
-        subscriptionRepository.save(subscription);
+        List<CreditTransferLog> investments = creditTransferLogRepository.findByFromUserId(userId).stream()
+                .filter(t -> "SUBSCRIPTION".equals(t.getType()) || "REINVEST".equals(t.getType()))
+                .sorted((t1, t2) -> t2.getDate().compareTo(t1.getDate()))
+                .collect(java.util.stream.Collectors.toList());
         
-        // Create investment transaction record
-        CreditTransferLog investment = new CreditTransferLog();
-        investment.setFromUser(subscription.getUser());
-        investment.setToUser(null); // System/Project
-        investment.setProject(subscription.getProject());
-        investment.setAmount(subscription.getProject().getSubscriptionPrice());
-        investment.setType("SUBSCRIPTION");
-        investment.setDate(LocalDateTime.now());
-        investment.setNotes("Investment in " + subscription.getProject().getName());
-        creditTransferLogRepository.save(investment);
+        Map<String, Object> response = new HashMap<>();
+        response.put("user", userOpt.get());
+        response.put("investments", investments);
+        response.put("totalInvested", investments.stream()
+                .map(CreditTransferLog::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
         
-        return ResponseEntity.ok("Subscription approved successfully");
+        return ResponseEntity.ok(response);
+    }
+    
+    // Get project investment summary (for admin monitoring)
+    @GetMapping("/projects/{projectId}/investments")
+    public ResponseEntity<?> getProjectInvestmentSummary(@PathVariable Long projectId) {
+        Optional<Project> projectOpt = projectRepository.findById(projectId);
+        if (projectOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Project not found");
+        }
+        
+        List<CreditTransferLog> investments = creditTransferLogRepository.findAll().stream()
+                .filter(t -> projectId.equals(t.getProject() != null ? t.getProject().getId() : null))
+                .filter(t -> "SUBSCRIPTION".equals(t.getType()))
+                .sorted((t1, t2) -> t2.getDate().compareTo(t1.getDate()))
+                .collect(java.util.stream.Collectors.toList());
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("project", projectOpt.get());
+        response.put("investments", investments);
+        response.put("totalInvested", investments.stream()
+                .map(CreditTransferLog::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        response.put("uniqueInvestors", investments.stream()
+                .map(t -> t.getFromUser().getId())
+                .distinct()
+                .count());
+        
+        return ResponseEntity.ok(response);
     }
     
     @PostMapping("/subscriptions/{orderId}/reject")
@@ -490,12 +634,18 @@ public class AdminController {
     
     @GetMapping("/dashboard/stats")
     public ResponseEntity<?> getDashboardStats() {
+        // Debug: Log authentication info
+        System.out.println("[DEBUG] Dashboard stats requested");
+        System.out.println("[DEBUG] Authentication: " + SecurityContextHolder.getContext().getAuthentication());
+        
         Map<String, Object> stats = new HashMap<>();
         
         stats.put("totalUsers", userRepository.count());
         stats.put("totalProjects", projectRepository.count());
-        stats.put("pendingKyc", kycRepository.countByStatus(KYCStatus.PENDING));
+        stats.put("pendingKycRequests", kycRepository.countByStatus(KYCStatus.PENDING));
         stats.put("totalSubscriptions", subscriptionRepository.count());
+        stats.put("totalRevenue", 0.0); // TODO: Calculate from project subscription prices
+        stats.put("pendingWithdrawals", 0L); // TODO: Implement withdrawal counting
         
         return ResponseEntity.ok(stats);
     }

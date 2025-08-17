@@ -14,6 +14,7 @@ public class Project {
     private Double energyCapacity;
     private BigDecimal subscriptionPrice;
     private String status; // e.g., ACTIVE, PAUSED
+    private String imageUrl; // Path to the uploaded image
 
     public Project() {}
 
@@ -35,4 +36,7 @@ public class Project {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 } 

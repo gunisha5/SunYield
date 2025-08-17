@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import { authAPI } from '../services/api';
 import { RegisterRequest } from '../types';
-import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone, Zap, ArrowLeft } from 'lucide-react';
 
 const Register: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -48,125 +48,136 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="mx-auto h-12 w-12 bg-primary-600 rounded-lg flex items-center justify-center">
-            <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-green-100 py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Cdefs%3E%3Cpattern id=%22grain%22 width=%22100%22 height=%22100%22 patternUnits=%22userSpaceOnUse%22%3E%3Ccircle cx=%2225%22 cy=%2225%22 r=%221%22 fill=%22%2310b981%22 opacity=%220.1%22/%3E%3Ccircle cx=%2275%22 cy=%2275%22 r=%221%22 fill=%22%2310b981%22 opacity=%220.1%22/%3E%3Ccircle cx=%2250%22 cy=%2210%22 r=%220.5%22 fill=%22%2310b981%22 opacity=%220.1%22/%3E%3Ccircle cx=%2210%22 cy=%2260%22 r=%220.5%22 fill=%22%2310b981%22 opacity=%220.1%22/%3E%3Ccircle cx=%2290%22 cy=%2240%22 r=%220.5%22 fill=%22%2310b981%22 opacity=%220.1%22/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=%22100%22 height=%22100%22 fill=%22url(%23grain)%22/%3E%3C/svg%3E')] opacity-30"></div>
+      
+      {/* Back to Home Button */}
+      <button
+        onClick={() => navigate('/')}
+        className="absolute top-8 left-8 flex items-center space-x-2 text-green-600 hover:text-green-700 font-semibold transition-all duration-300 transform hover:scale-105"
+      >
+        <ArrowLeft className="h-5 w-5" />
+        <span>Back to Home</span>
+      </button>
+
+      <div className="max-w-md w-full space-y-8 relative z-10">
+        <div className="text-center">
+          {/* Logo */}
+          <div className="mx-auto h-16 w-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-110 transition-all duration-300">
+            <Zap className="h-8 w-8 text-white" />
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
+          
+          {/* Title */}
+          <h2 className="mt-8 text-center text-4xl font-black text-gray-900 gradient-text">
+            Join Solar Capital
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
-              sign in to your existing account
+          <p className="mt-4 text-center text-lg text-gray-600">
+            Create your account and start investing in solar energy
+          </p>
+          <p className="mt-2 text-center text-sm text-gray-500">
+            Already have an account?{' '}
+            <Link to="/login" className="font-semibold text-green-600 hover:text-green-700 transition-colors duration-300">
+              Sign in here
             </Link>
           </p>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+          <div className="space-y-6">
+            {/* Full Name Field */}
+            <div className="form-group">
+              <label htmlFor="fullName" className="form-label">
                 Full Name
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="fullName"
-                  type="text"
-                  autoComplete="name"
-                  {...register('fullName', {
-                    required: 'Full name is required',
-                    minLength: {
-                      value: 2,
-                      message: 'Full name must be at least 2 characters',
-                    },
-                  })}
-                  className={`appearance-none relative block w-full pl-10 pr-3 py-2 border ${
-                    errors.fullName ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm`}
-                  placeholder="Enter your full name"
-                />
-              </div>
+              <input
+                id="fullName"
+                type="text"
+                autoComplete="name"
+                {...register('fullName', {
+                  required: 'Full name is required',
+                  minLength: {
+                    value: 2,
+                    message: 'Full name must be at least 2 characters',
+                  },
+                })}
+                className={`form-input ${
+                  errors.fullName ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : ''
+                }`}
+                placeholder="Enter your full name"
+              />
               {errors.fullName && (
-                <p className="mt-1 text-sm text-red-600">{errors.fullName.message}</p>
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <span className="w-1 h-1 bg-red-600 rounded-full mr-2"></span>
+                  {errors.fullName.message}
+                </p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
+            {/* Email Field */}
+            <div className="form-group">
+              <label htmlFor="email" className="form-label">
+                Email Address
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  {...register('email', {
-                    required: 'Email is required',
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Invalid email address',
-                    },
-                  })}
-                  className={`appearance-none relative block w-full pl-10 pr-3 py-2 border ${
-                    errors.email ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm`}
-                  placeholder="Enter your email"
-                />
-              </div>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                {...register('email', {
+                  required: 'Email is required',
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: 'Invalid email address',
+                  },
+                })}
+                className={`form-input ${
+                  errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : ''
+                }`}
+                placeholder="Enter your email address"
+              />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <span className="w-1 h-1 bg-red-600 rounded-full mr-2"></span>
+                  {errors.email.message}
+                </p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="contact" className="block text-sm font-medium text-gray-700">
+            {/* Phone Number Field */}
+            <div className="form-group">
+              <label htmlFor="contact" className="form-label">
                 Phone Number
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Phone className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="contact"
-                  type="tel"
-                  autoComplete="tel"
-                  {...register('contact', {
-                    required: 'Phone number is required',
-                    pattern: {
-                      value: /^[0-9]{10}$/,
-                      message: 'Please enter a valid 10-digit phone number',
-                    },
-                  })}
-                  className={`appearance-none relative block w-full pl-10 pr-3 py-2 border ${
-                    errors.contact ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm`}
-                  placeholder="Enter your phone number"
-                />
-              </div>
+              <input
+                id="contact"
+                type="tel"
+                autoComplete="tel"
+                {...register('contact', {
+                  required: 'Phone number is required',
+                  pattern: {
+                    value: /^[0-9]{10}$/,
+                    message: 'Please enter a valid 10-digit phone number',
+                  },
+                })}
+                className={`form-input ${
+                  errors.contact ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : ''
+                }`}
+                placeholder="Enter your phone number"
+              />
               {errors.contact && (
-                <p className="mt-1 text-sm text-red-600">{errors.contact.message}</p>
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <span className="w-1 h-1 bg-red-600 rounded-full mr-2"></span>
+                  {errors.contact.message}
+                </p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            {/* Password Field */}
+            <div className="form-group">
+              <label htmlFor="password" className="form-label">
                 Password
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
+              <div className="relative">
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -178,36 +189,37 @@ const Register: React.FC = () => {
                       message: 'Password must be at least 6 characters',
                     },
                   })}
-                  className={`appearance-none relative block w-full pl-10 pr-10 py-2 border ${
-                    errors.password ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm`}
-                  placeholder="Enter your password"
+                  className={`form-input pr-12 ${
+                    errors.password ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : ''
+                  }`}
+                  placeholder="Create a strong password"
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-300"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5" />
                   )}
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <span className="w-1 h-1 bg-red-600 rounded-full mr-2"></span>
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+            {/* Confirm Password Field */}
+            <div className="form-group">
+              <label htmlFor="confirmPassword" className="form-label">
                 Confirm Password
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
+              <div className="relative">
                 <input
                   id="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
@@ -216,56 +228,80 @@ const Register: React.FC = () => {
                     required: 'Please confirm your password',
                     validate: (value) => value === password || 'Passwords do not match',
                   })}
-                  className={`appearance-none relative block w-full pl-10 pr-10 py-2 border ${
-                    errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                  } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm`}
+                  className={`form-input pr-12 ${
+                    errors.confirmPassword ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : ''
+                  }`}
                   placeholder="Confirm your password"
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-300"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5" />
                   )}
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+                <p className="mt-2 text-sm text-red-600 flex items-center">
+                  <span className="w-1 h-1 bg-red-600 rounded-full mr-2"></span>
+                  {errors.confirmPassword.message}
+                </p>
               )}
             </div>
           </div>
 
+          {/* Submit Button */}
           <div>
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary w-full flex justify-center items-center py-4 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <div className="loading-spinner"></div>
               ) : (
-                'Create Account'
+                'Create Solar Capital Account'
               )}
             </button>
           </div>
 
+          {/* Terms and Privacy */}
           <div className="text-center">
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-gray-500">
               By creating an account, you agree to our{' '}
-              <a href="#" className="text-primary-600 hover:text-primary-500">
+              <a href="#" className="text-green-600 hover:text-green-700 transition-colors duration-300">
                 Terms of Service
               </a>{' '}
               and{' '}
-              <a href="#" className="text-primary-600 hover:text-primary-500">
+              <a href="#" className="text-green-600 hover:text-green-700 transition-colors duration-300">
                 Privacy Policy
               </a>
             </p>
           </div>
         </form>
+
+        {/* Benefits Section */}
+        <div className="mt-8 p-6 bg-white rounded-2xl shadow-lg border border-green-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Why Join Solar Capital?</h3>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-gray-600">Invest in renewable energy projects</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-gray-600">Earn attractive returns while saving the planet</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-sm text-gray-600">Transparent and secure investment platform</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

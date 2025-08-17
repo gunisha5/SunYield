@@ -12,4 +12,5 @@ public interface WithdrawalRequestRepository extends JpaRepository<WithdrawalReq
     List<WithdrawalRequest> findByUserIdAndStatusAndRequestDateBetween(Long userId, String status, java.time.LocalDateTime start, java.time.LocalDateTime end);
     List<WithdrawalRequest> findByStatus(String status);
     long countByStatus(String status);
+    List<WithdrawalRequest> findByPaymentReferenceId(String paymentReferenceId);
 } 

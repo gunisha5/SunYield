@@ -27,9 +27,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/auth/**",
+                                "/api/auth/**",
                                 "/admin/login",
                                 "/admin/generate-hash",
+                                "/admin/test-auth",
                                 "/api/energy/record",
+                                "/api/projects/active",
+                                "/api/projects/images/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs",
@@ -46,6 +50,10 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.addAllowedOrigin("http://localhost:3000"); // Frontend URL
         configuration.addAllowedOrigin("http://127.0.0.1:3000"); // Alternative frontend URL
+        configuration.addAllowedOrigin("http://localhost:3001"); // Test page URL
+        configuration.addAllowedOrigin("http://127.0.0.1:3001"); // Alternative test page URL
+        configuration.addAllowedOrigin("http://localhost:3002"); // Additional dev port
+        configuration.addAllowedOrigin("http://127.0.0.1:3002"); // Additional dev port
         configuration.addAllowedMethod("*"); // Allow all HTTP methods
         configuration.addAllowedHeader("*"); // Allow all headers
         configuration.setAllowCredentials(true); // Allow credentials (cookies, authorization headers)

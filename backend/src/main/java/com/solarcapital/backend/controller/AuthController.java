@@ -16,9 +16,12 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import com.solarcapital.backend.repository.CreditTransferLogRepository;
+import com.solarcapital.backend.repository.RewardHistoryRepository;
+import com.solarcapital.backend.repository.SubscriptionRepository;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 public class AuthController {
     @Autowired
     private UserRepository userRepository;
@@ -26,6 +29,12 @@ public class AuthController {
     private EmailService emailService;
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired
+    private SubscriptionRepository subscriptionRepository;
+    @Autowired
+    private RewardHistoryRepository rewardHistoryRepository;
+    @Autowired
+    private CreditTransferLogRepository creditTransferLogRepository;
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // Registration endpoint
@@ -77,7 +86,23 @@ public class AuthController {
         user.setOtp(null);
         user.setOtpGeneratedTime(null);
         userRepository.save(user);
-        return ResponseEntity.ok("OTP verified. You can now log in.");
+        
+        // Generate token and return user data
+        String token = jwtUtil.generateToken(email);
+        
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("token", token);
+        resp.put("user", Map.of(
+            "id", user.getId(),
+            "email", user.getEmail(),
+            "fullName", user.getFullName(),
+            "contact", user.getContact(),
+            "kycStatus", user.getKycStatus(),
+            "isVerified", user.isVerified(),
+            "role", user.getRole()
+        ));
+        
+        return ResponseEntity.ok(resp);
     }
 
     // Resend OTP endpoint
@@ -150,13 +175,8 @@ public class AuthController {
                 return ResponseEntity.status(401).body("Not authenticated");
             }
             
-            String email = authentication.getName();
-            Optional<User> userOpt = userRepository.findByEmail(email);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.status(404).body("User not found");
-            }
-            
-            User user = userOpt.get();
+            // Get user object from authentication
+            User user = (User) authentication.getPrincipal();
             System.out.println("[DEBUG] getCurrentUser - User data: " + user.getEmail() + ", " + user.getFullName() + ", " + user.getContact());
             
             Map<String, Object> userData = Map.of(
@@ -175,6 +195,70 @@ public class AuthController {
             System.err.println("[ERROR] getCurrentUser exception: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body("Error fetching user data");
+        }
+    }
+
+    // Debug endpoint to test user-specific data
+    @GetMapping("/debug/user-data")
+    public ResponseEntity<?> debugUserData() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(401).body("Not authenticated");
+            }
+            
+            Object principal = authentication.getPrincipal();
+            User user = null;
+            
+            if (principal instanceof User) {
+                user = (User) principal;
+            } else if (principal instanceof String) {
+                String email = (String) principal;
+                
+                // Handle anonymousUser case
+                if ("anonymousUser".equals(email)) {
+                    return ResponseEntity.status(401).body("User not authenticated - anonymousUser detected. Please login first.");
+                }
+                
+                // If principal is email string, fetch user from database
+                Optional<User> userOpt = userRepository.findByEmail(email);
+                if (userOpt.isPresent()) {
+                    user = userOpt.get();
+                } else {
+                    return ResponseEntity.status(404).body("User not found for email: " + email);
+                }
+            } else {
+                return ResponseEntity.status(500).body("Unexpected principal type: " + principal.getClass().getName());
+            }
+            
+            // Get user-specific data counts
+            long subscriptionCount = subscriptionRepository.findByUser(user).size();
+            long rewardCount = rewardHistoryRepository.findByUser(user).size();
+            long fromTransactionCount = creditTransferLogRepository.findByFromUserId(user.getId()).size();
+            long toTransactionCount = creditTransferLogRepository.findByToUserId(user.getId()).size();
+            
+            Map<String, Object> debugData = new HashMap<>();
+            debugData.put("user", Map.of(
+                "id", user.getId(),
+                "email", user.getEmail(),
+                "fullName", user.getFullName()
+            ));
+            debugData.put("dataCounts", Map.of(
+                "subscriptions", subscriptionCount,
+                "rewards", rewardCount,
+                "outgoingTransactions", fromTransactionCount,
+                "incomingTransactions", toTransactionCount
+            ));
+            debugData.put("authenticationInfo", Map.of(
+                "principalType", principal.getClass().getName(),
+                "principalValue", principal.toString(),
+                "isAuthenticated", authentication.isAuthenticated()
+            ));
+            
+            return ResponseEntity.ok(debugData);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error in debug endpoint: " + e.getMessage());
         }
     }
 } 

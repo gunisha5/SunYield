@@ -6,8 +6,9 @@ import toast from 'react-hot-toast';
 interface PaymentData {
   orderId: string;
   amount: number;
-  projectName: string;
+  projectName?: string;
   userEmail: string;
+  paymentType: 'subscription' | 'wallet';
 }
 
 const MockPayment: React.FC = () => {
@@ -29,13 +30,15 @@ const MockPayment: React.FC = () => {
     const amount = params.get('amount');
     const projectName = params.get('projectName');
     const userEmail = params.get('userEmail');
+    const paymentType = params.get('paymentType') as 'subscription' | 'wallet' || 'subscription';
 
-    if (orderId && amount && projectName && userEmail) {
+    if (orderId && amount && userEmail) {
       setPaymentData({
         orderId,
         amount: parseFloat(amount),
-        projectName,
-        userEmail
+        projectName: projectName || undefined,
+        userEmail,
+        paymentType
       });
     } else {
       toast.error('Invalid payment data');
@@ -43,7 +46,7 @@ const MockPayment: React.FC = () => {
     }
   }, [location, navigate]);
 
-  const handlePayment = async (success: boolean) => {
+  const handlePayment = async () => {
     if (!paymentData) return;
 
     setLoading(true);
@@ -51,19 +54,56 @@ const MockPayment: React.FC = () => {
       // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Call webhook to update payment status
-      const response = await fetch(`http://localhost:8080/api/subscriptions/webhook?orderId=${paymentData.orderId}&status=${success ? 'SUCCESS' : 'FAILED'}`);
+      // Determine payment success based on payment details
+      let isSuccess = true;
       
-      if (response.ok) {
-        if (success) {
-          toast.success('Payment successful! You are now subscribed to the project.');
-          navigate('/dashboard');
+      // Check for failure conditions
+      if (paymentMethod === 'card' && cardNumber) {
+        const cleanCardNumber = cardNumber.replace(/\s/g, '');
+        if (cleanCardNumber.endsWith('0000')) {
+          isSuccess = false; // Force failure for cards ending in 0000
+        }
+      }
+
+      if (paymentData.paymentType === 'wallet') {
+        // Handle wallet payment
+        if (isSuccess) {
+          // Process the payment to add funds to wallet
+          const response = await fetch(`http://localhost:8080/api/wallet/add-funds/process-payment?orderId=${paymentData.orderId}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            toast.success('Payment successful! Funds have been added to your wallet.');
+            navigate('/app/wallet');
+          } else {
+            const error = await response.text();
+            toast.error('Failed to add funds to wallet: ' + error);
+            navigate('/app/wallet');
+          }
         } else {
           toast.error('Payment failed. Please try again.');
-          navigate('/projects');
+          navigate('/app/wallet');
         }
       } else {
-        toast.error('Failed to process payment status');
+        // Handle subscription payment
+        const response = await fetch(`http://localhost:8080/api/subscriptions/webhook?orderId=${paymentData.orderId}&status=${isSuccess ? 'SUCCESS' : 'FAILED'}`);
+        
+        if (response.ok) {
+          if (isSuccess) {
+            toast.success('Payment successful! You are now subscribed to the project.');
+            navigate('/app/dashboard');
+          } else {
+            toast.error('Payment failed. Please try again.');
+            navigate('/projects');
+          }
+        } else {
+          toast.error('Failed to process payment status');
+        }
       }
     } catch (error) {
       console.error('Payment error:', error);
@@ -106,7 +146,9 @@ const MockPayment: React.FC = () => {
               <CreditCard className="h-8 w-8 text-primary-600" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Mock Payment Gateway</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {paymentData.paymentType === 'wallet' ? 'Add Funds to Wallet' : 'Project Subscription'}
+          </h1>
           <p className="text-gray-600">Simulated Cashfree Payment Interface</p>
         </div>
 
@@ -120,9 +162,15 @@ const MockPayment: React.FC = () => {
                 <span className="text-gray-600">Order ID:</span>
                 <span className="font-medium">{paymentData.orderId}</span>
               </div>
+              {paymentData.projectName && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Project:</span>
+                  <span className="font-medium">{paymentData.projectName}</span>
+                </div>
+              )}
               <div className="flex justify-between">
-                <span className="text-gray-600">Project:</span>
-                <span className="font-medium">{paymentData.projectName}</span>
+                <span className="text-gray-600">Type:</span>
+                <span className="font-medium capitalize">{paymentData.paymentType}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Amount:</span>
@@ -249,31 +297,16 @@ const MockPayment: React.FC = () => {
           {/* Payment Buttons */}
           <div className="space-y-3">
             <button
-              onClick={() => handlePayment(true)}
+              onClick={handlePayment}
               disabled={loading}
-              className="w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              className="w-full bg-primary-600 text-white py-3 px-4 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {loading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
               ) : (
                 <>
                   <CheckCircle className="h-5 w-5 mr-2" />
-                  Simulate Successful Payment
-                </>
-              )}
-            </button>
-            
-            <button
-              onClick={() => handlePayment(false)}
-              disabled={loading}
-              className="w-full bg-red-600 text-white py-3 px-4 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <>
-                  <XCircle className="h-5 w-5 mr-2" />
-                  Simulate Failed Payment
+                  Pay Now
                 </>
               )}
             </button>
@@ -281,7 +314,7 @@ const MockPayment: React.FC = () => {
 
           {/* Cancel Button */}
           <button
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate(paymentData.paymentType === 'wallet' ? '/app/wallet' : '/projects')}
             className="w-full mt-3 text-gray-600 py-2 px-4 rounded-md border border-gray-300 hover:bg-gray-50"
           >
             Cancel Payment

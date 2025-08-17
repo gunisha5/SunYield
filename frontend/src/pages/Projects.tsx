@@ -1,17 +1,30 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { projectsAPI, subscriptionsAPI } from '../services/api';
 import { Project } from '../types';
-import { MapPin, Zap, DollarSign, Calendar, ArrowRight } from 'lucide-react';
+import { MapPin, Zap, DollarSign, Calendar, ArrowRight, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
+import RegistrationPopup from '../components/RegistrationPopup';
 
 const Projects: React.FC = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState<number | null>(null);
+  const [showRegistrationPopup, setShowRegistrationPopup] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   useEffect(() => {
+    // If user is not authenticated, redirect to landing page
+    if (!isAuthenticated) {
+      navigate('/');
+      return;
+    }
+    
     fetchProjects();
-  }, []);
+  }, [isAuthenticated, navigate]);
 
   const fetchProjects = async () => {
     try {
@@ -26,20 +39,27 @@ const Projects: React.FC = () => {
     }
   };
 
-  const handleSubscribe = async (projectId: number) => {
+  const handleSubscribe = async (project: Project) => {
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      setSelectedProject(project);
+      setShowRegistrationPopup(true);
+      return;
+    }
+
     try {
-      setSubscribing(projectId);
-      const response = await subscriptionsAPI.initiateSubscription(projectId);
+      setSubscribing(project.id);
+      const response = await subscriptionsAPI.subscribeToProject(project.id);
       
-      // Redirect to mock payment page
-      const project = projects.find(p => p.id === projectId);
-      const paymentUrl = `/mock-payment?orderId=${response.data.paymentOrderId}&amount=${project?.subscriptionPrice}&projectName=${encodeURIComponent(project?.name || '')}&userEmail=${encodeURIComponent(localStorage.getItem('userEmail') || '')}`;
+      // Show success message and refresh projects
+      toast.success(`Successfully subscribed to ${response.data.projectName}!`);
+      fetchProjects(); // Refresh the projects list
       
-      window.location.href = paymentUrl;
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error subscribing to project:', error);
-      toast.error('Failed to subscribe to project');
+      const errorMessage = error.response?.data || 'Failed to subscribe to project';
+      toast.error(errorMessage);
+    } finally {
       setSubscribing(null);
     }
   };
@@ -53,129 +73,133 @@ const Projects: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Solar Projects</h1>
-        <p className="text-gray-600">Invest in renewable energy projects and earn returns</p>
-      </div>
-
-      {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.map((project) => (
-          <div key={project.id} className="card hover:shadow-lg transition-shadow duration-200">
-            <div className="space-y-4">
-              {/* Project Image Placeholder */}
-              <div className="aspect-w-16 aspect-h-9 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg flex items-center justify-center">
-                <Zap className="h-12 w-12 text-primary-600" />
-              </div>
-
-              {/* Project Info */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
-                <div className="flex items-center text-sm text-gray-500 mt-1">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  {project.location}
-                </div>
-              </div>
-
-              {/* Project Stats */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Energy Capacity</p>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {project.energyCapacity} MW
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Subscription Price</p>
-                  <p className="text-lg font-semibold text-primary-600">
-                    ₹{project.subscriptionPrice.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-
-              {/* Project Status */}
-              <div className="flex items-center justify-between">
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    project.status === 'ACTIVE'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}
-                >
-                  {project.status}
-                </span>
-                <div className="flex items-center text-sm text-gray-500">
-                  <Calendar className="h-4 w-4 mr-1" />
-                  <span>Active</span>
-                </div>
-              </div>
-
-              {/* Subscribe Button */}
-              <button
-                onClick={() => handleSubscribe(project.id)}
-                disabled={subscribing === project.id || project.status !== 'ACTIVE'}
-                className="btn-primary w-full flex items-center justify-center"
+    <div className="min-h-screen bg-gray-50">
+      {/* Projects Section */}
+      <div className="py-24 bg-gradient-to-br from-gray-50 to-green-50 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Cdefs%3E%3Cpattern id=%22dots%22 width=%2220%22 height=%2220%22 patternUnits=%22userSpaceOnUse%22%3E%3Ccircle cx=%2210%22 cy=%2210%22 r=%221%22 fill=%22%2310b981%22 opacity=%220.1%22/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=%22100%22 height=%22100%22 fill=%22url(%23dots)%22/%3E%3C/svg%3E')] opacity-30"></div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl font-black text-gray-900 mb-6 gradient-text">
+              Premium Solar Investments
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Choose from our carefully curated portfolio of high-performing solar installations and start earning rewards
+            </p>
+          </div>
+          
+          {/* Projects Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            {projects.map((project, index) => (
+              <div 
+                key={project.id} 
+                className="project-card group"
+                style={{ animationDelay: `${index * 0.2}s` }}
               >
-                {subscribing === project.id ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                ) : (
-                  <>
-                    Subscribe Now
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </div>
+                <div className="project-image relative overflow-hidden">
+                  {project.imageUrl ? (
+                    <img 
+                      src={`http://localhost:8080/api/projects/images/${project.imageUrl.split('/').pop()}`}
+                      alt={project.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      onError={(e) => {
+                        // Fallback to default design if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        target.nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
+                  
+                  {/* Fallback Design (shown when no image or image fails to load) */}
+                  <div className={`absolute inset-0 bg-gradient-to-br from-green-400 to-blue-500 opacity-20 group-hover:opacity-30 transition-opacity duration-300 ${project.imageUrl ? 'hidden' : ''}`}>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Zap className="h-20 w-20 text-green-600 relative z-10 group-hover:scale-110 transition-transform duration-300" />
+                    </div>
+                  </div>
+                  
+                  {/* Status Badge */}
+                  <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                    {project.status}
+                  </div>
+                </div>
+                
+                <div className="p-6">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-green-600 transition-colors duration-300">
+                    {project.name}
+                  </h3>
+                  <div className="flex items-center text-gray-600 mb-6">
+                    <MapPin className="h-5 w-5 mr-2 text-green-500" />
+                    <span className="font-medium">{project.location}</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-8">
+                    <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
+                      <p className="text-sm text-gray-600 font-medium mb-1">Energy Capacity</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {project.energyCapacity} MW
+                      </p>
+                    </div>
+                    <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+                      <p className="text-sm text-gray-600 font-medium mb-1">Price</p>
+                      <p className="text-xl font-bold text-green-600">
+                        ₹{project.subscriptionPrice.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Project Stats */}
+                  <div className="flex justify-between items-center mb-6 text-sm text-gray-600">
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="h-4 w-4" />
+                      <span>Active project</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <TrendingUp className="h-4 w-4" />
+                      <span>12-15% returns</span>
+                    </div>
+                  </div>
+
+                  {/* Subscribe Button */}
+                  <button
+                    onClick={() => handleSubscribe(project)}
+                    disabled={subscribing === project.id || project.status !== 'ACTIVE'}
+                    className="w-full btn-primary flex items-center justify-center space-x-2 group"
+                  >
+                    {subscribing === project.id ? (
+                      <div className="loading-spinner mx-auto"></div>
+                    ) : (
+                      <>
+                        <span>Subscribe Now</span>
+                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+
+          {/* Empty State */}
+          {projects.length === 0 && (
+            <div className="text-center py-16">
+              <Zap className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+              <h3 className="text-xl font-medium text-gray-900 mb-2">No projects available</h3>
+              <p className="text-gray-600">
+                Check back later for new solar energy projects.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Empty State */}
-      {projects.length === 0 && (
-        <div className="text-center py-12">
-          <Zap className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No projects available</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Check back later for new solar energy projects.
-          </p>
-        </div>
-      )}
-
-      {/* Project Benefits */}
-      <div className="card">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Why Invest in Solar Projects?</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <div className="mx-auto h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center mb-3">
-              <DollarSign className="h-6 w-6 text-green-600" />
-            </div>
-            <h4 className="text-sm font-medium text-gray-900">Stable Returns</h4>
-            <p className="text-xs text-gray-500 mt-1">
-              Earn consistent returns from renewable energy production
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="mx-auto h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
-              <Zap className="h-6 w-6 text-blue-600" />
-            </div>
-            <h4 className="text-sm font-medium text-gray-900">Clean Energy</h4>
-            <p className="text-xs text-gray-500 mt-1">
-              Support sustainable energy and reduce carbon footprint
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="mx-auto h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
-              <MapPin className="h-6 w-6 text-purple-600" />
-            </div>
-            <h4 className="text-sm font-medium text-gray-900">Local Impact</h4>
-            <p className="text-xs text-gray-500 mt-1">
-              Invest in projects that benefit local communities
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Registration Popup */}
+      <RegistrationPopup
+        isOpen={showRegistrationPopup}
+        onClose={() => setShowRegistrationPopup(false)}
+        projectName={selectedProject?.name}
+      />
     </div>
   );
 };

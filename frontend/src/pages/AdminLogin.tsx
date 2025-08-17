@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import { Mail, Lock, Shield } from 'lucide-react';
+import api from '../services/api';
 
 interface AdminLoginRequest {
   email: string;
@@ -22,28 +23,18 @@ const AdminLogin: React.FC = () => {
   const onSubmit = async (data: AdminLoginRequest) => {
     try {
       setIsLoading(true);
-      const response = await fetch('http://localhost:8080/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+      const response = await api.post('/admin/login', data);
 
-      if (response.ok) {
-        const result = await response.json();
+      if (response.status === 200) {
+        const result = response.data;
         localStorage.setItem('adminToken', result.token);
         toast.success('Admin login successful!');
         navigate('/admin/dashboard');
-      } else {
-        // Handle plain text error responses
-        const errorText = await response.text();
-        console.error('Admin login failed:', errorText);
-        toast.error(errorText || 'Admin login failed');
       }
     } catch (error: any) {
       console.error('Admin login error:', error);
-      toast.error('Admin login failed. Please try again.');
+      const errorMessage = error.response?.data || 'Admin login failed. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

@@ -14,33 +14,12 @@ import {
   Edit,
   Trash2,
   DollarSign,
-  Zap
+  Zap,
+  Image
 } from 'lucide-react';
-
-interface DashboardStats {
-  totalUsers: number;
-  totalProjects: number;
-  pendingKyc: number;
-  totalSubscriptions: number;
-}
-
-interface User {
-  id: number;
-  email: string;
-  fullName: string;
-  role: 'USER' | 'ADMIN';
-  isVerified: boolean;
-  kycStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
-}
-
-interface Project {
-  id: number;
-  name: string;
-  location: string;
-  energyCapacity: number;
-  subscriptionPrice: number;
-  status: 'ACTIVE' | 'PAUSED';
-}
+import ProjectImageUpload from '../components/ProjectImageUpload';
+import { adminAPI } from '../services/api';
+import { DashboardStats, User, Project, KYC } from '../types';
 
 interface KYCData {
   id: number;
@@ -49,9 +28,10 @@ interface KYCData {
     email: string;
     fullName: string;
   };
-  pan: string;
-  documentPath: string;
+  documentType: string;
+  documentNumber: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  submittedAt: string;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -74,6 +54,8 @@ const AdminDashboard: React.FC = () => {
   const [pendingPayments, setPendingPayments] = useState<any[]>([]);
   const [monthlyWithdrawalCap, setMonthlyWithdrawalCap] = useState<number>(3000);
   const [showConfigModal, setShowConfigModal] = useState(false);
+  const [showImageUploadModal, setShowImageUploadModal] = useState(false);
+  const [selectedProjectForImage, setSelectedProjectForImage] = useState<Project | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -99,73 +81,45 @@ const AdminDashboard: React.FC = () => {
   };
 
   const fetchStats = async () => {
-    const adminToken = localStorage.getItem('adminToken');
-    const response = await fetch('http://localhost:8080/admin/dashboard/stats', {
-      headers: {
-        'Authorization': `Bearer ${adminToken}`,
-      },
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      setStats(data);
+    try {
+      const response = await adminAPI.getDashboardStats();
+      setStats(response.data);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
     }
   };
 
   const fetchUsers = async () => {
-    const adminToken = localStorage.getItem('adminToken');
-    const response = await fetch('http://localhost:8080/admin/users', {
-      headers: {
-        'Authorization': `Bearer ${adminToken}`,
-      },
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      setUsers(data);
+    try {
+      const response = await adminAPI.getAllUsers();
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
     }
   };
 
   const fetchProjects = async () => {
-    const adminToken = localStorage.getItem('adminToken');
-    const response = await fetch('http://localhost:8080/admin/projects', {
-      headers: {
-        'Authorization': `Bearer ${adminToken}`,
-      },
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      setProjects(data);
+    try {
+      const response = await adminAPI.getAllProjects();
+      setProjects(response.data);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
     }
   };
 
   const fetchKycData = async () => {
-    const adminToken = localStorage.getItem('adminToken');
-    const response = await fetch('http://localhost:8080/admin/kyc/pending', {
-      headers: {
-        'Authorization': `Bearer ${adminToken}`,
-      },
-    });
-    
-    if (response.ok) {
-      const data = await response.json();
-      setKycData(data);
+    try {
+      const response = await adminAPI.getPendingKyc();
+      setKycData(response.data);
+    } catch (error) {
+      console.error('Error fetching KYC data:', error);
     }
   };
 
   const fetchPendingPayments = async () => {
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:8080/admin/subscriptions/pending', {
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setPendingPayments(data);
-      }
+      const response = await adminAPI.getPendingSubscriptions();
+      setPendingPayments(response.data);
     } catch (error) {
       console.error('Error fetching pending payments:', error);
     }
@@ -173,16 +127,8 @@ const AdminDashboard: React.FC = () => {
 
   const fetchMonthlyWithdrawalCap = async () => {
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:8080/admin/config/monthly-withdrawal-cap', {
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setMonthlyWithdrawalCap(Number(data.amount));
-      }
+      const response = await adminAPI.getMonthlyWithdrawalCap();
+      setMonthlyWithdrawalCap(response.data.cap);
     } catch (error) {
       console.error('Error fetching monthly withdrawal cap:', error);
     }
@@ -495,7 +441,7 @@ const AdminDashboard: React.FC = () => {
         },
         body: JSON.stringify({ 
           energyProduced: energyAmount,
-          date: new Date().toISOString()
+          date: new Date().toISOString().split('T')[0] // Send only the date part (YYYY-MM-DD)
         }),
       });
 
@@ -546,7 +492,7 @@ const AdminDashboard: React.FC = () => {
           <Shield className="h-8 w-8 text-yellow-600" />
           <div className="ml-4">
             <p className="text-sm font-medium text-gray-600">Pending KYC</p>
-            <p className="text-2xl font-semibold text-gray-900">{stats?.pendingKyc || 0}</p>
+            <p className="text-2xl font-semibold text-gray-900">{stats?.pendingKycRequests || 0}</p>
           </div>
         </div>
       </div>
@@ -686,6 +632,16 @@ const AdminDashboard: React.FC = () => {
                       <Zap className="h-4 w-4" />
                     </button>
                     <button 
+                      onClick={() => {
+                        setSelectedProjectForImage(project);
+                        setShowImageUploadModal(true);
+                      }}
+                      className="text-purple-600 hover:text-purple-900 mr-2"
+                      title="Upload Image"
+                    >
+                      <Image className="h-4 w-4" />
+                    </button>
+                    <button 
                       onClick={() => openEditModal(project)}
                       className="text-blue-600 hover:text-blue-900 mr-2"
                       title="Edit Project"
@@ -724,8 +680,9 @@ const AdminDashboard: React.FC = () => {
                   <div>
                     <h4 className="text-sm font-medium text-gray-900">{kyc.user.fullName}</h4>
                     <p className="text-sm text-gray-500">{kyc.user.email}</p>
-                    <p className="text-sm text-gray-500">Document: {kyc.pan}</p>
-                    <p className="text-sm text-gray-500">File: {kyc.documentPath}</p>
+                    <p className="text-sm text-gray-500">Document: {kyc.documentNumber}</p>
+                    <p className="text-sm text-gray-500">Type: {kyc.documentType}</p>
+                    <p className="text-sm text-gray-500">Submitted: {new Date(kyc.submittedAt).toLocaleDateString()}</p>
                   </div>
                   <div className="flex space-x-2">
                     <button
@@ -1046,6 +1003,29 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Image Upload Modal */}
+        {showImageUploadModal && selectedProjectForImage && (
+          <ProjectImageUpload
+            projectId={selectedProjectForImage.id}
+            projectName={selectedProjectForImage.name}
+            currentImageUrl={selectedProjectForImage.imageUrl}
+            onImageUploaded={(imageUrl) => {
+              // Update the project in the local state
+              setProjects(projects.map(p => 
+                p.id === selectedProjectForImage.id 
+                  ? { ...p, imageUrl } 
+                  : p
+              ));
+              setShowImageUploadModal(false);
+              setSelectedProjectForImage(null);
+            }}
+            onClose={() => {
+              setShowImageUploadModal(false);
+              setSelectedProjectForImage(null);
+            }}
+          />
         )}
 
         {/* Create Project Modal */}

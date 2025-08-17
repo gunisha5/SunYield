@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { walletAPI, projectsAPI, subscriptionsAPI } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { walletAPI, projectsAPI, subscriptionsAPI, earningsAPI } from '../services/api';
 import { Project, Subscription, Wallet as WalletType } from '../types';
 import { 
   TrendingUp, 
@@ -9,7 +10,8 @@ import {
   Users,
   ArrowUpRight,
   ArrowDownRight,
-  Wallet
+  Wallet,
+  ArrowRight
 } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
@@ -18,20 +20,24 @@ const Dashboard: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
+  const [monthlyIncome, setMonthlyIncome] = useState<number>(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const [walletData, projectsData, subscriptionsData] = await Promise.all([
+        const [walletData, projectsData, subscriptionsData, earningsData] = await Promise.all([
           walletAPI.getWallet(),
           projectsAPI.getActiveProjects(),
           subscriptionsAPI.getSubscriptionHistory(),
+          earningsAPI.getEarningsSummary()
         ]);
 
         setWallet(walletData.data);
         setProjects(projectsData.data);
         setSubscriptions(subscriptionsData.data);
+        setMonthlyIncome(earningsData.data.monthlyIncome || 0);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -40,7 +46,7 @@ const Dashboard: React.FC = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [user]); // Add user as dependency
 
   const stats = [
     {
@@ -120,6 +126,28 @@ const Dashboard: React.FC = () => {
         ))}
       </div>
 
+      {/* Quick Earnings Overview */}
+      <div className="card bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">💰 Earnings Overview</h3>
+            <p className="text-gray-600 mb-3">Track your profits and see which projects are performing best</p>
+            <button
+              onClick={() => navigate('/app/earnings')}
+              className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium"
+            >
+              View Detailed Earnings <ArrowRight className="ml-1 h-4 w-4" />
+            </button>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold text-green-600">
+              ₹{monthlyIncome.toLocaleString()}
+            </div>
+            <p className="text-sm text-gray-500">Monthly Earnings</p>
+          </div>
+        </div>
+      </div>
+
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Subscriptions */}
@@ -127,7 +155,7 @@ const Dashboard: React.FC = () => {
           <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Subscriptions</h3>
           {subscriptions.length > 0 ? (
             <div className="space-y-4">
-              {subscriptions.slice(0, 5).map((subscription) => (
+              {subscriptions.slice(0, 3).map((subscription) => (
                 <div key={subscription.id} className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-900">
@@ -152,6 +180,15 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
               ))}
+              {subscriptions.length > 3 && (
+                <button
+                  onClick={() => navigate('/app/subscriptions')}
+                  className="mt-4 w-full flex items-center justify-center text-primary-600 hover:text-primary-700 font-medium py-2 px-4 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors"
+                >
+                  View All Subscriptions ({subscriptions.length} total)
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </button>
+              )}
             </div>
           ) : (
             <p className="text-gray-500 text-sm">No subscriptions yet</p>
@@ -163,7 +200,7 @@ const Dashboard: React.FC = () => {
           <h3 className="text-lg font-medium text-gray-900 mb-4">Active Projects</h3>
           {projects.length > 0 ? (
             <div className="space-y-4">
-              {projects.slice(0, 5).map((project) => (
+              {projects.slice(0, 3).map((project) => (
                 <div key={project.id} className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-900">{project.name}</p>
@@ -179,6 +216,15 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
               ))}
+              {projects.length > 3 && (
+                <button
+                  onClick={() => navigate('/app/projects')}
+                  className="mt-4 w-full flex items-center justify-center text-primary-600 hover:text-primary-700 font-medium py-2 px-4 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors"
+                >
+                  View All Projects ({projects.length} total)
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </button>
+              )}
             </div>
           ) : (
             <p className="text-gray-500 text-sm">No active projects</p>

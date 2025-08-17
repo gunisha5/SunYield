@@ -43,10 +43,10 @@ public class EngagementController {
     private BigDecimal getUserAvailableCredits(User user) {
         BigDecimal balance = BigDecimal.ZERO;
         
-        // Add rewards (earnings)
-        List<RewardHistory> rewards = rewardHistoryRepository.findAll();
+        // Add rewards (earnings) - use user-specific query
+        List<RewardHistory> rewards = rewardHistoryRepository.findByUser(user);
         for (RewardHistory reward : rewards) {
-            if (reward.getUser().getId().equals(user.getId()) && "SUCCESS".equals(reward.getStatus())) {
+            if ("SUCCESS".equals(reward.getStatus())) {
                 if (reward.getRewardAmount() != null) {
                     balance = balance.add(reward.getRewardAmount());
                 }
@@ -247,6 +247,12 @@ public class EngagementController {
             User user = getCurrentUser();
             String recipientEmail = request.get("recipientEmail").toString();
             BigDecimal amount = new BigDecimal(request.get("amount").toString());
+            
+            // Check KYC status (required for gifts)
+            if (user.getKycStatus() == null || !"APPROVED".equalsIgnoreCase(user.getKycStatus().name())) {
+                System.out.println("[DEBUG] KYC Status for gift: " + user.getKycStatus());
+                return ResponseEntity.badRequest().body("KYC approval required for sending gifts. Current status: " + user.getKycStatus());
+            }
             
             Optional<User> recipientOpt = userRepository.findByEmail(recipientEmail);
             if (recipientOpt.isEmpty()) {

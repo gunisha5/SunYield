@@ -15,6 +15,7 @@ export interface Project {
   energyCapacity: number;
   subscriptionPrice: number;
   status: 'ACTIVE' | 'PAUSED';
+  imageUrl?: string;
 }
 
 export interface Subscription {
@@ -84,6 +85,16 @@ export interface SubscriptionRequest {
 
 export interface WithdrawalRequestData {
   amount: number;
+  payoutMethod?: string;
+  upiId?: string;
+}
+
+export interface WithdrawalResponse {
+  success: boolean;
+  message: string;
+  orderId?: string;
+  amount?: number;
+  status?: string;
 }
 
 export interface KYCData {
@@ -122,4 +133,33 @@ export interface EngagementStats {
   totalReceived: number;
   availableCredits: number;
   totalTransactions: number;
+}
+
+export interface DashboardStats {
+  totalUsers: number;
+  totalProjects: number;
+  totalSubscriptions: number;
+  totalRevenue: number;
+  pendingKycRequests: number;
+  pendingWithdrawals: number;
+}
+
+export interface CreditTransferLog {
+  id: number;
+  fromUser?: User;
+  toUser?: User;
+  project?: Project;
+  amount: number;
+  type: string;
+  date: string;
+  notes?: string;
+}
+
+export interface KYC {
+  id: number;
+  user: User;
+  documentType: string;
+  documentNumber: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  submittedAt: string;
 } 

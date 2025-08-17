@@ -11,4 +11,5 @@ public interface CreditTransferLogRepository extends JpaRepository<CreditTransfe
     List<CreditTransferLog> findByFromUserId(Long userId);
     List<CreditTransferLog> findByToUserId(Long userId);
     List<CreditTransferLog> findByProjectId(Long projectId);
+    List<CreditTransferLog> findByFromUserIdAndTypeAndNotesContaining(Long userId, String type, String notes);
 } 

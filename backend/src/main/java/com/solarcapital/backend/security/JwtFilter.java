@@ -17,6 +17,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.Collections;
+import org.springframework.security.core.Authentication;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
@@ -44,29 +45,50 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
-            email = jwtUtil.extractEmail(token);
-            System.out.println("[DEBUG] Extracted email from JWT: " + email); // DEBUG point
+            try {
+                email = jwtUtil.extractEmail(token);
+                System.out.println("[DEBUG] Extracted email from JWT: " + email); // DEBUG point
+            } catch (Exception e) {
+                System.err.println("[ERROR] Failed to extract email from token: " + e.getMessage());
+                chain.doFilter(request, response);
+                return;
+            }
+        } else {
+            System.out.println("[DEBUG] No Authorization header found or invalid format");
         }
 
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            Optional<User> userOpt = userRepository.findByEmail(email);
-            if (userOpt.isPresent() && jwtUtil.validateToken(token)) {
-                User user = userOpt.get();
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(user, null, Collections.emptyList());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-                System.out.println("[DEBUG] Authentication set for user: " + user.getEmail()); // DEBUG point
+        if (email != null && !email.equals("anonymousUser") && SecurityContextHolder.getContext().getAuthentication() == null) {
+            try {
+                Optional<User> userOpt = userRepository.findByEmail(email);
+                if (userOpt.isPresent() && jwtUtil.validateToken(token)) {
+                    User user = userOpt.get();
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(user, null, Collections.emptyList());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                    System.out.println("[DEBUG] Authentication set for user: " + user.getEmail() + ", ID: " + user.getId()); // DEBUG point
+                } else {
+                    System.out.println("[DEBUG] User not found or token invalid for email: " + email);
+                }
+            } catch (Exception e) {
+                System.err.println("[ERROR] Exception in JwtFilter: " + e.getMessage());
             }
+        } else {
+            System.out.println("[DEBUG] Email is null, anonymousUser, or authentication already exists");
         }
+        
         chain.doFilter(request, response);
-        System.out.println("[DEBUG] Authentication in SecurityContext after filter: " + SecurityContextHolder.getContext().getAuthentication()); // DEBUG point
+        
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        System.out.println("[DEBUG] Authentication in SecurityContext after filter: " + 
+            (auth != null ? auth.getPrincipal() : "null")); // DEBUG point
     }
     
     private boolean isPublicEndpoint(String requestURI) {
         return requestURI.startsWith("/auth/") || 
                requestURI.startsWith("/admin/login") ||
                requestURI.startsWith("/admin/generate-hash") ||
+               requestURI.startsWith("/admin/test-auth") ||
                requestURI.startsWith("/swagger-ui/") ||
                requestURI.startsWith("/v3/api-docs") ||
                requestURI.equals("/swagger-ui.html") ||
