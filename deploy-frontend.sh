@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Frontend Deployment Script for AWS EC2
-echo "🚀 Starting Solar Capital Frontend Deployment..."
+echo "🚀 Starting SunYield Frontend Deployment..."
 
 # Update system packages
 echo "📦 Updating system packages..."
@@ -20,15 +20,15 @@ sudo yum install -y nginx
 
 # Create application directory
 echo "📁 Creating application directory..."
-sudo mkdir -p /var/www/solarcapital
-sudo chown ec2-user:ec2-user /var/www/solarcapital
+sudo mkdir -p /var/www/sunyield
+sudo chown ec2-user:ec2-user /var/www/sunyield
 
 # Copy application files (assuming you've uploaded them)
 echo "📋 Copying application files..."
-cp -r frontend/* /var/www/solarcapital/
+cp -r frontend/* /var/www/sunyield/
 
 # Navigate to application directory
-cd /var/www/solarcapital
+cd /var/www/sunyield
 
 # Install dependencies
 echo "📦 Installing dependencies..."
@@ -44,7 +44,7 @@ sudo cp -r build/* /usr/share/nginx/html/
 
 # Configure nginx
 echo "⚙️ Configuring nginx..."
-sudo tee /etc/nginx/conf.d/solarcapital.conf > /dev/null <<EOF
+sudo tee /etc/nginx/conf.d/sunyield.conf > /dev/null <<EOF
 server {
     listen 80;
     server_name your-domain.com www.your-domain.com;

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# 🚀 Solar Capital Deployment to gunisha5/SolarCapital
-echo "🚀 Deploying to gunisha5/SolarCapital repository"
+# 🚀 SunYield Deployment to gunisha5/sunyield
+echo "🚀 Deploying to gunisha5/sunyield repository"
 echo "================================================"
 
 # Colors for output
@@ -29,7 +29,7 @@ print_step() {
 
 # Configuration
 GITHUB_USERNAME="gunisha5"
-GITHUB_REPO_NAME="SolarCapital"
+GITHUB_REPO_NAME="sunyield"
 EC2_IP="13.235.242.67"
 PPK_FILE="C:\\Users\\HP\\Downloads\\Solarbackend\\s.ppk"
 
@@ -79,7 +79,7 @@ if [ "$UPDATE_RDS" = "y" ] || [ "$UPDATE_RDS" = "Y" ]; then
         cp backend/src/main/resources/application-prod.properties backend/src/main/resources/application-prod.properties.backup
         
         # Update database configuration
-        sed -i "s|jdbc:mysql://localhost:3306/solarcapital|jdbc:mysql://$RDS_ENDPOINT:3306/solarcapital|g" backend/src/main/resources/application-prod.properties
+        sed -i "s|jdbc:mysql://localhost:3306/sunyield|jdbc:mysql://$RDS_ENDPOINT:3306/sunyield|g" backend/src/main/resources/application-prod.properties
         sed -i "s|spring.datasource.username=root|spring.datasource.username=$RDS_USERNAME|g" backend/src/main/resources/application-prod.properties
         sed -i "s|spring.datasource.password=password|spring.datasource.password=$RDS_PASSWORD|g" backend/src/main/resources/application-prod.properties
         
@@ -111,7 +111,7 @@ fi
 
 # Add all changes
 git add .
-git commit -m "Update Solar Capital project - $(date)"
+git commit -m "Update SunYield project - $(date)"
 
 # Add or update remote
 if git remote get-url origin > /dev/null 2>&1; then
@@ -141,7 +141,7 @@ print_step "EC2 Deployment"
 cat > ec2-deploy.sh << 'EOF'
 #!/bin/bash
 
-echo "🚀 Deploying Solar Capital to EC2..."
+echo "🚀 Deploying SunYield to EC2..."
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -159,17 +159,17 @@ print_warning() {
 
 # Stop services
 print_status "Stopping services..."
-sudo systemctl stop solarcapital-backend 2>/dev/null || true
+sudo systemctl stop sunyield-backend 2>/dev/null || true
 sudo systemctl stop nginx 2>/dev/null || true
 
 # Backup current deployment
 print_status "Creating backup..."
-BACKUP_DIR="/opt/solarcapital-backup-$(date +%Y%m%d-%H%M%S)"
-sudo cp -r /opt/solarcapital $BACKUP_DIR 2>/dev/null || true
-sudo cp -r /var/www/solarcapital /var/www/solarcapital-backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+BACKUP_DIR="/opt/sunyield-backup-$(date +%Y%m%d-%H%M%S)"
+sudo cp -r /opt/sunyield $BACKUP_DIR 2>/dev/null || true
+sudo cp -r /var/www/sunyield /var/www/sunyield-backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
 
 # Navigate to project directory
-cd /home/ec2-user/solarcapital-backend
+cd /home/ec2-user/sunyield-backend
 
 # Pull latest changes
 print_status "Pulling latest changes from GitHub..."
@@ -185,12 +185,12 @@ else
     print_warning "deploy-backend.sh not found, using manual deployment..."
     
     # Manual backend deployment
-    cd /opt/solarcapital
+    cd /opt/sunyield
     mvn clean package -DskipTests
     
     # Restart backend service
     sudo systemctl daemon-reload
-    sudo systemctl start solarcapital-backend
+    sudo systemctl start sunyield-backend
 fi
 
 # Deploy frontend
@@ -202,7 +202,7 @@ else
     print_warning "deploy-frontend.sh not found, using manual deployment..."
     
     # Manual frontend deployment
-    cd /var/www/solarcapital
+    cd /var/www/sunyield
     npm install
     npm run build
     sudo cp -r build/* /usr/share/nginx/html/
@@ -213,7 +213,7 @@ fi
 
 # Verify deployment
 print_status "Verifying deployment..."
-sudo systemctl status solarcapital-backend --no-pager
+sudo systemctl status sunyield-backend --no-pager
 sudo systemctl status nginx --no-pager
 
 print_status "✅ Deployment completed!"

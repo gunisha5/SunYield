@@ -4,7 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { projectsAPI } from '../services/api';
 import { Project } from '../types';
 import RegistrationPopup from '../components/RegistrationPopup';
-import { Zap, MapPin, TrendingUp, Users, ArrowRight, Play, Star, Calendar } from 'lucide-react';
+import ProfileDropdown from '../components/ProfileDropdown';
+import SharedNavigation from '../components/SharedNavigation';
+import { Zap, MapPin, TrendingUp, Users, ArrowRight, Play, Star, Calendar, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const PublicProjects: React.FC = () => {
@@ -70,74 +72,7 @@ const PublicProjects: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Header */}
-      <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Left side - Solar Capital Logo */}
-            <div className="flex items-center -ml-8">
-              <div className="flex-shrink-0">
-                <button 
-                  onClick={() => navigate('/')}
-                  className="flex items-center text-2xl font-bold text-green-600 hover:text-green-700 transition-colors pl-8 group"
-                >
-                  <Zap className="h-8 w-8 mr-2 group-hover:scale-110 transition-transform duration-200" />
-                  Solar Capital
-                </button>
-              </div>
-            </div>
-            
-            {/* Center - Navigation Links */}
-            <div className="flex items-center space-x-8">
-              <button
-                onClick={() => navigate('/')}
-                className="text-gray-700 hover:text-green-600 font-medium transition-colors"
-              >
-                Home
-              </button>
-              <button
-                onClick={() => navigate('/how-it-works')}
-                className="text-gray-700 hover:text-green-600 font-medium transition-colors"
-              >
-                How It Works
-              </button>
-              <button
-                onClick={() => navigate('/about')}
-                className="text-gray-600 hover:text-green-600 font-medium transition-colors"
-              >
-                About Us
-              </button>
-              <button
-                onClick={() => navigate('/benefits')}
-                className="text-gray-700 hover:text-green-600 font-medium transition-colors"
-              >
-                Benefits
-              </button>
-              <button
-                onClick={() => navigate('/projects')}
-                className="text-green-600 font-semibold border-b-2 border-green-600 pb-1 transition-colors"
-              >
-                Explore Projects
-              </button>
-            </div>
-            
-            {/* Right side - Auth Buttons */}
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={handleLogin}
-                className="text-gray-700 hover:text-green-600 font-medium transition-colors"
-              >
-                Login
-              </button>
-              <button
-                onClick={handleRegister}
-                className="btn-primary"
-              >
-                Register
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <SharedNavigation />
 
       {/* Hero Section */}
       <section className="hero-section">
@@ -245,13 +180,41 @@ const PublicProjects: React.FC = () => {
                         </p>
                       </div>
                       <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-                        <p className="text-sm text-gray-600 font-medium mb-1">Price</p>
+                        <p className="text-sm text-gray-600 font-medium mb-1">Min Contribution</p>
                         <p className="text-xl font-bold text-green-600">
-                          ₹{project.subscriptionPrice.toLocaleString()}
+                          ₹{(project.minContribution || project.subscriptionPrice || 999).toLocaleString()}
                         </p>
                       </div>
                     </div>
                     
+                    {/* Solar Capital Fields */}
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="text-center p-3 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg border border-yellow-200">
+                        <p className="text-xs text-gray-600 font-medium mb-1">Efficiency</p>
+                        <p className="text-sm font-bold text-yellow-700">
+                          {project.efficiency || 'MEDIUM'}
+                        </p>
+                      </div>
+                      <div className={`text-center p-3 rounded-lg border ${
+                        (project.operationalValidityYear || 2025) >= new Date().getFullYear()
+                          ? 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200'
+                          : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200'
+                      }`}>
+                        <p className="text-xs text-gray-600 font-medium mb-1">Validity</p>
+                        <p className={`text-sm font-bold ${
+                          (project.operationalValidityYear || 2025) >= new Date().getFullYear()
+                            ? 'text-purple-700'
+                            : 'text-gray-500'
+                        }`}>
+                          {project.operationalValidityYear || 2025}
+                          {(project.operationalValidityYear || 2025) < new Date().getFullYear() && (
+                            <span className="block text-xs text-red-500">Expired</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    
+
                     {/* Project Stats */}
                     <div className="flex justify-between items-center mb-6 text-sm text-gray-600">
                       <div className="flex items-center space-x-1">
@@ -260,7 +223,7 @@ const PublicProjects: React.FC = () => {
                       </div>
                       <div className="flex items-center space-x-1">
                         <TrendingUp className="h-4 w-4" />
-                        <span>12-15% returns</span>
+                        <span>₹5 per kWh</span>
                       </div>
                     </div>
 
@@ -279,27 +242,120 @@ const PublicProjects: React.FC = () => {
         </div>
       </section>
 
-      {/* Call to Action */}
-      <section className="py-16 bg-green-600 text-white text-center">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold mb-4">Ready to Start Your Solar Journey?</h2>
-          <p className="text-xl mb-8">Join thousands of investors who are already earning Green Credits</p>
-          <div className="flex justify-center space-x-4">
-            <button
-              onClick={handleRegister}
-              className="bg-white text-green-600 hover:bg-gray-100 font-semibold py-3 px-8 rounded-lg transition-colors"
-            >
-              Get Started
-            </button>
-            <button
-              onClick={() => navigate('/')}
-              className="border-2 border-white text-white hover:bg-white hover:text-green-600 font-semibold py-3 px-8 rounded-lg transition-colors"
-            >
-              Learn More
-            </button>
+      {/* Call to Action - Different content for authenticated vs non-authenticated users */}
+      {isAuthenticated ? (
+        <section className="py-16 bg-green-600 text-white text-center">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl font-bold mb-4">Explore More Investment Opportunities</h2>
+            <p className="text-xl mb-8">Discover new projects and manage your existing portfolio</p>
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                <div className="text-white/80 text-sm mb-2">Your Portfolio</div>
+                <h3 className="text-white font-semibold mb-3">View Active Investments</h3>
+                <button
+                  onClick={() => navigate('/app/projects')}
+                  className="w-full bg-white text-green-600 font-semibold py-3 px-4 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  My Projects
+                </button>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                <div className="text-white/80 text-sm mb-2">Track Performance</div>
+                <h3 className="text-white font-semibold mb-3">Monitor Earnings</h3>
+                <button
+                  onClick={() => navigate('/app/earnings')}
+                  className="w-full bg-white text-green-600 font-semibold py-3 px-4 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  Check Earnings
+                </button>
+              </div>
+            </div>
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={() => navigate('/app/dashboard')}
+                className="bg-white text-green-600 hover:bg-gray-100 font-semibold py-3 px-8 rounded-lg transition-colors"
+              >
+                Go to Dashboard
+              </button>
+              <button
+                onClick={() => navigate('/app/wallet')}
+                className="border-2 border-white text-white hover:bg-white hover:text-green-600 font-semibold py-3 px-8 rounded-lg transition-colors"
+              >
+                Manage Wallet
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="py-16 bg-green-600 text-white text-center">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl font-bold mb-4">Ready to Start Your Solar Journey?</h2>
+            <p className="text-xl mb-8">Join thousands of investors who are already earning Green Credits</p>
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={handleRegister}
+                className="bg-white text-green-600 hover:bg-gray-100 font-semibold py-3 px-8 rounded-lg transition-colors"
+              >
+                Get Started
+              </button>
+              <button
+                onClick={() => navigate('/')}
+                className="border-2 border-white text-white hover:bg-white hover:text-green-600 font-semibold py-3 px-8 rounded-lg transition-colors"
+              >
+                Learn More
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center mb-4">
+                <Zap className="h-8 w-8 text-green-400 mr-2" />
+                <span className="text-xl font-bold">SunYield</span>
+              </div>
+              <p className="text-gray-400">
+                Revolutionizing solar investment opportunities for everyone. We're building India's largest community of renewable energy investors, making sustainable wealth creation accessible to all.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li><button onClick={() => navigate(isAuthenticated ? '/app/projects' : '/projects')} className="hover:text-white transition-colors">Projects</button></li>
+                <li><button onClick={() => navigate('/how-it-works')} className="hover:text-white transition-colors">How It Works</button></li>
+                <li><button onClick={() => navigate('/about')} className="hover:text-white transition-colors">About Us</button></li>
+                <li><button onClick={() => navigate('/benefits')} className="hover:text-white transition-colors">Benefits</button></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Get Started</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li><button onClick={handleLogin} className="hover:text-white transition-colors font-semibold">Login</button></li>
+                <li><button onClick={handleRegister} className="hover:text-white transition-colors">Register</button></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Legal</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li>Terms of Service</li>
+                <li>Privacy Policy</li>
+                <li>Exit Policy</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+            <p>&copy; 2025 SunYield. All rights reserved.</p>
           </div>
         </div>
-      </section>
+      </footer>
 
       <RegistrationPopup
         isOpen={showRegistrationPopup}

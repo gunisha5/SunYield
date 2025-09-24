@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Enhanced Frontend Deployment Script for AWS EC2
-echo "🚀 Starting Solar Capital Frontend Deployment..."
+echo "🚀 Starting SunYield Frontend Deployment..."
 
 # Get the current EC2 public IP
 PUBLIC_IP=$(curl -s http://checkip.amazonaws.com)
@@ -41,20 +41,20 @@ sudo yum install -y nginx
 
 # Create application directory
 echo "📁 Creating application directory..."
-sudo mkdir -p /var/www/solarcapital
-sudo chown ec2-user:ec2-user /var/www/solarcapital
+sudo mkdir -p /var/www/sunyield
+sudo chown ec2-user:ec2-user /var/www/sunyield
 
 # Copy frontend files (assuming frontend folder exists in current directory)
 echo "📋 Copying application files..."
 if [ -d "frontend" ]; then
-    cp -r frontend/* /var/www/solarcapital/
+    cp -r frontend/* /var/www/sunyield/
 else
     echo "❌ Frontend directory not found. Please ensure you're in the project root directory."
     exit 1
 fi
 
 # Navigate to frontend directory
-cd /var/www/solarcapital
+cd /var/www/sunyield
 
 # Create .env file for production
 echo "⚙️ Creating production environment file..."
@@ -84,7 +84,7 @@ sudo cp -r build/* /usr/share/nginx/html/
 
 # Configure nginx
 echo "⚙️ Configuring nginx..."
-sudo tee /etc/nginx/conf.d/solarcapital.conf > /dev/null <<EOF
+sudo tee /etc/nginx/conf.d/sunyield.conf > /dev/null <<EOF
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
@@ -166,7 +166,7 @@ sudo systemctl status nginx --no-pager
 
 # Test if frontend is accessible
 echo "🌐 Testing frontend..."
-if curl -f http://localhost 2>/dev/null | grep -q "Solar Capital" 2>/dev/null; then
+if curl -f http://localhost 2>/dev/null | grep -q "SunYield" 2>/dev/null; then
     echo "✅ Frontend is accessible"
 else
     echo "⚠️ Frontend test inconclusive, but nginx is running"

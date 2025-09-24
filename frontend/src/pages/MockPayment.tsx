@@ -42,7 +42,7 @@ const MockPayment: React.FC = () => {
       });
     } else {
       toast.error('Invalid payment data');
-      navigate('/projects');
+      navigate('/app/projects');
     }
   }, [location, navigate]);
 
@@ -99,7 +99,7 @@ const MockPayment: React.FC = () => {
             navigate('/app/dashboard');
           } else {
             toast.error('Payment failed. Please try again.');
-            navigate('/projects');
+            navigate('/app/projects');
           }
         } else {
           toast.error('Failed to process payment status');
@@ -314,7 +314,7 @@ const MockPayment: React.FC = () => {
 
           {/* Cancel Button */}
           <button
-            onClick={() => navigate(paymentData.paymentType === 'wallet' ? '/app/wallet' : '/projects')}
+            onClick={() => navigate(paymentData.paymentType === 'wallet' ? '/app/wallet' : '/app/projects')}
             className="w-full mt-3 text-gray-600 py-2 px-4 rounded-md border border-gray-300 hover:bg-gray-50"
           >
             Cancel Payment

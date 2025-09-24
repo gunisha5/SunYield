@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../services/api';
 import { OtpVerificationRequest } from '../types';
 import { Mail, ArrowLeft, Zap, Shield } from 'lucide-react';
@@ -11,6 +12,7 @@ const OtpVerification: React.FC = () => {
   const [isResending, setIsResending] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { verifyOtp } = useAuth();
   
   // Get email from location state or URL params
   const email = location.state?.email || new URLSearchParams(location.search).get('email');
@@ -24,12 +26,8 @@ const OtpVerification: React.FC = () => {
   const onSubmit = async (data: OtpVerificationRequest) => {
     try {
       setIsLoading(true);
-      const response = await authAPI.verifyOtp(data);
-      
-      if (response.data) {
-        toast.success('Email verified successfully! You can now log in.');
-        navigate('/login');
-      }
+      await verifyOtp(data.email, data.otp);
+      navigate('/');
     } catch (error: any) {
       console.error('OTP verification error:', error);
       toast.error(error.response?.data?.message || 'OTP verification failed. Please try again.');

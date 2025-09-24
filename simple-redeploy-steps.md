@@ -18,7 +18,7 @@ git init
 git add .
 
 # Commit changes
-git commit -m "Update Solar Capital project"
+git commit -m "Update SunYield project"
 
 # Add your GitHub remote (replace with your details)
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
@@ -34,7 +34,7 @@ If your RDS endpoint or other configurations have changed:
 **Backend Database Configuration:**
 Edit `backend/src/main/resources/application-prod.properties`:
 ```properties
-spring.datasource.url=jdbc:mysql://YOUR_RDS_ENDPOINT:3306/solarcapital?allowPublicKeyRetrieval=true&useSSL=false
+spring.datasource.url=jdbc:mysql://YOUR_RDS_ENDPOINT:3306/sunyield?allowPublicKeyRetrieval=true&useSSL=false
 spring.datasource.username=YOUR_RDS_USERNAME
 spring.datasource.password=YOUR_RDS_PASSWORD
 ```
@@ -54,11 +54,11 @@ ssh -i your-key.pem ec2-user@YOUR_EC2_IP
 Then run these commands on EC2:
 ```bash
 # Stop services
-sudo systemctl stop solarcapital-backend
+sudo systemctl stop sunyield-backend
 sudo systemctl stop nginx
 
 # Navigate to your project directory
-cd /home/ec2-user/solarcapital-backend
+cd /home/ec2-user/sunyield-backend
 
 # Pull latest changes
 git fetch origin
@@ -73,7 +73,7 @@ chmod +x deploy-frontend.sh
 ./deploy-frontend.sh
 
 # Check status
-sudo systemctl status solarcapital-backend
+sudo systemctl status sunyield-backend
 sudo systemctl status nginx
 ```
 
@@ -92,11 +92,11 @@ sudo systemctl status nginx
 If something goes wrong:
 ```bash
 # On EC2, check logs
-sudo journalctl -u solarcapital-backend -f
+sudo journalctl -u sunyield-backend -f
 sudo journalctl -u nginx -f
 
 # Restart services if needed
-sudo systemctl restart solarcapital-backend
+sudo systemctl restart sunyield-backend
 sudo systemctl restart nginx
 ```
 

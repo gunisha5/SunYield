@@ -1,5 +1,5 @@
 Write-Host "========================================" -ForegroundColor Green
-Write-Host "Solar Capital Backend Restart Script" -ForegroundColor Green
+Write-Host "SunYield Backend Restart Script" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 
 Write-Host ""

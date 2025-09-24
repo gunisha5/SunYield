@@ -1,5 +1,5 @@
 -- Initialize system configuration table
-USE solarcapital;
+USE sunyield;
 
 -- Create system_config table if it doesn't exist
 CREATE TABLE IF NOT EXISTS system_config (

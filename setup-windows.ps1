@@ -1,7 +1,7 @@
-# Solar Capital AWS Deployment Setup for Windows
+# SunYield AWS Deployment Setup for Windows
 # Run this in PowerShell from your project root directory
 
-Write-Host "🚀 Solar Capital - Windows Setup for AWS Deployment" -ForegroundColor Green
+Write-Host "🚀 SunYield - Windows Setup for AWS Deployment" -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Green
 
 # Check if we're in the right directory
@@ -32,7 +32,7 @@ Write-Host "✅ Deployment files prepared" -ForegroundColor Green
 Write-Host "📦 Creating project archive..." -ForegroundColor Yellow
 
 # Create a zip file with necessary project files
-$zipPath = "$deployDir\solar-capital-project.zip"
+$zipPath = "$deployDir\sunyield-project.zip"
 if (Test-Path $zipPath) {
     Remove-Item $zipPath
 }
@@ -92,7 +92,7 @@ Write-Host "   - Use WinSCP to upload: $zipPath" -ForegroundColor Gray
 Write-Host "   - Or use Git if your code is on GitHub/GitLab" -ForegroundColor Gray
 Write-Host ""
 Write-Host "4. 🚀 On EC2, extract and run deployment:" -ForegroundColor White
-Write-Host "   unzip solar-capital-project.zip" -ForegroundColor Gray
+Write-Host "   unzip sunyield-project.zip" -ForegroundColor Gray
 Write-Host "   chmod +x *.sh" -ForegroundColor Gray
 Write-Host "   ./deploy-backend-improved.sh" -ForegroundColor Gray
 Write-Host "   ./deploy-frontend-improved.sh" -ForegroundColor Gray

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 🚀 GitHub Repository Replacement and EC2 Redeployment Script
-echo "🚀 Solar Capital GitHub Replacement and EC2 Redeployment"
+echo "🚀 SunYield GitHub Replacement and EC2 Redeployment"
 echo "=========================================================="
 
 # Colors for output
@@ -101,7 +101,7 @@ if [ -n "$RDS_ENDPOINT" ] && [ -n "$RDS_USERNAME" ] && [ -n "$RDS_PASSWORD" ]; t
     cp backend/src/main/resources/application-prod.properties backend/src/main/resources/application-prod.properties.backup
     
     # Update database configuration
-    sed -i "s|jdbc:mysql://localhost:3306/solarcapital|jdbc:mysql://$RDS_ENDPOINT:3306/solarcapital|g" backend/src/main/resources/application-prod.properties
+    sed -i "s|jdbc:mysql://localhost:3306/sunyield|jdbc:mysql://$RDS_ENDPOINT:3306/sunyield|g" backend/src/main/resources/application-prod.properties
     sed -i "s|spring.datasource.username=root|spring.datasource.username=$RDS_USERNAME|g" backend/src/main/resources/application-prod.properties
     sed -i "s|spring.datasource.password=password|spring.datasource.password=$RDS_PASSWORD|g" backend/src/main/resources/application-prod.properties
     
@@ -129,11 +129,11 @@ if [ ! -d ".git" ]; then
     print_status "Initializing Git repository..."
     git init
     git add .
-    git commit -m "Initial commit - Solar Capital project"
+    git commit -m "Initial commit - SunYield project"
 else
     print_status "Git repository already exists, adding changes..."
     git add .
-    git commit -m "Update Solar Capital project configuration"
+    git commit -m "Update SunYield project configuration"
 fi
 
 # Add or update remote
@@ -167,7 +167,7 @@ cat > deploy-to-ec2.sh << 'EOF'
 #!/bin/bash
 
 # EC2 Deployment Script
-echo "🚀 Deploying Solar Capital to EC2..."
+echo "🚀 Deploying SunYield to EC2..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -185,24 +185,24 @@ print_error() {
 
 # Stop existing services
 print_status "Stopping existing services..."
-sudo systemctl stop solarcapital-backend 2>/dev/null || true
+sudo systemctl stop sunyield-backend 2>/dev/null || true
 sudo systemctl stop nginx 2>/dev/null || true
 
 # Backup existing deployment
 print_status "Creating backup of existing deployment..."
-sudo cp -r /opt/solarcapital /opt/solarcapital-backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
-sudo cp -r /var/www/solarcapital /var/www/solarcapital-backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+sudo cp -r /opt/sunyield /opt/sunyield-backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+sudo cp -r /var/www/sunyield /var/www/sunyield-backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
 
 # Remove old files
 print_status "Removing old files..."
-sudo rm -rf /opt/solarcapital
-sudo rm -rf /var/www/solarcapital
+sudo rm -rf /opt/sunyield
+sudo rm -rf /var/www/sunyield
 
 # Clone updated repository
 print_status "Cloning updated repository..."
 cd /home/ec2-user
-git clone https://github.com/REPLACE_GITHUB_USERNAME/REPLACE_GITHUB_REPO_NAME.git solarcapital-backend
-cd solarcapital-backend
+git clone https://github.com/REPLACE_GITHUB_USERNAME/REPLACE_GITHUB_REPO_NAME.git sunyield-backend
+cd sunyield-backend
 
 # Deploy backend
 print_status "Deploying backend..."
@@ -226,7 +226,7 @@ fi
 
 # Verify deployment
 print_status "Verifying deployment..."
-sudo systemctl status solarcapital-backend
+sudo systemctl status sunyield-backend
 sudo systemctl status nginx
 
 print_status "Deployment completed successfully!"

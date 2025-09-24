@@ -13,9 +13,14 @@ export interface Project {
   name: string;
   location: string;
   energyCapacity: number;
-  subscriptionPrice: number;
+  subscriptionPrice: number; // Legacy field
+  minContribution: number; // New Solar Capital field
+  efficiency: 'HIGH' | 'MEDIUM' | 'LOW'; // New Solar Capital field
+  operationalValidityYear: number; // Operational validity year for the project
+  description?: string; // New Solar Capital field
   status: 'ACTIVE' | 'PAUSED';
   imageUrl?: string;
+  // Updated for Solar Capital migration - v2
 }
 
 export interface Subscription {
@@ -25,6 +30,9 @@ export interface Subscription {
   paymentOrderId: string;
   paymentStatus: 'PENDING' | 'SUCCESS' | 'FAILED';
   subscribedAt: string;
+  contributionAmount: number; // Actual amount user contributed
+  reservedCapacity: number; // Capacity reserved based on contribution
+  subscriptionType: 'FIXED' | 'FLEXIBLE'; // Subscription type
 }
 
 export interface Wallet {
@@ -34,6 +42,7 @@ export interface Wallet {
   totalEarnings: number;
   totalInvested: number;
 }
+
 
 export interface WithdrawalRequest {
   id: number;
@@ -97,6 +106,24 @@ export interface WithdrawalResponse {
   status?: string;
 }
 
+export interface Coupon {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  discountType: 'PERCENTAGE' | 'FIXED';
+  discountValue: number;
+  minAmount?: number;
+  maxDiscount?: number;
+  maxUsage?: number;
+  currentUsage: number;
+  isActive: boolean;
+  validFrom?: string;
+  validUntil?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface KYCData {
   id: number;
   user: User;
@@ -114,6 +141,7 @@ export interface EngagementTransaction {
   notes?: string;
   direction?: 'INCOMING' | 'OUTGOING';
   project?: {
+    id: number;
     name: string;
   };
   fromUser?: {

@@ -1,4 +1,4 @@
-# 🚀 AWS EC2 Deployment Guide for Solar Capital
+# 🚀 AWS EC2 Deployment Guide for SunYield
 
 ## 📋 **Step-by-Step Deployment Process**
 
@@ -48,7 +48,7 @@ Inbound Rules:
 - Storage: 20 GB
 - Multi-AZ: No (for cost savings)
 - Security Group: RDS-SG
-- Database Name: solarcapital
+- Database Name: sunyield
 ```
 
 **RDS Security Group (RDS-SG):**
@@ -88,7 +88,7 @@ chmod +x deploy-backend.sh
 #### **2.3 Update Configuration**
 ```bash
 # Edit production properties
-sudo nano /opt/solarcapital/src/main/resources/application-prod.properties
+sudo nano /opt/sunyield/src/main/resources/application-prod.properties
 
 # Update with your actual values:
 - RDS endpoint
@@ -99,8 +99,8 @@ sudo nano /opt/solarcapital/src/main/resources/application-prod.properties
 
 #### **2.4 Restart Service**
 ```bash
-sudo systemctl restart solarcapital-backend
-sudo systemctl status solarcapital-backend
+sudo systemctl restart sunyield-backend
+sudo systemctl status sunyield-backend
 ```
 
 ### **🔧 Step 3: Frontend Deployment**
@@ -125,7 +125,7 @@ chmod +x deploy-frontend.sh
 #### **3.3 Update Configuration**
 ```bash
 # Edit nginx configuration
-sudo nano /etc/nginx/conf.d/solarcapital.conf
+sudo nano /etc/nginx/conf.d/sunyield.conf
 
 # Update with your actual values:
 - Domain name
@@ -165,14 +165,14 @@ sudo crontab -e
 #### **5.1 Check Application Logs**
 ```bash
 # Backend logs
-sudo journalctl -u solarcapital-backend -f
+sudo journalctl -u sunyield-backend -f
 
 # Nginx logs
 sudo tail -f /var/log/nginx/access.log
 sudo tail -f /var/log/nginx/error.log
 
 # Application logs
-tail -f /var/log/solarcapital/application.log
+tail -f /var/log/sunyield/application.log
 ```
 
 #### **5.2 Health Checks**
@@ -201,7 +201,7 @@ source create_admin_user.sql
 #### **7.1 Backend Environment**
 ```bash
 # Create environment file
-sudo nano /opt/solarcapital/.env
+sudo nano /opt/sunyield/.env
 
 # Add sensitive data
 DB_PASSWORD=your_actual_password
@@ -212,7 +212,7 @@ JWT_SECRET=your_jwt_secret
 #### **7.2 Frontend Environment**
 ```bash
 # Create .env file
-nano /var/www/solarcapital/.env
+nano /var/www/sunyield/.env
 
 # Add
 REACT_APP_API_URL=https://your-backend-domain.com
@@ -316,4 +316,4 @@ REACT_APP_API_URL=https://your-backend-domain.com
 
 ---
 
-**🎉 Your Solar Capital application is now deployed on AWS!** 
+**🎉 Your SunYield application is now deployed on AWS!** 

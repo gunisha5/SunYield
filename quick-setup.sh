@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Quick Setup Script - Prepares deployment files
-echo "🚀 Solar Capital - Quick Setup for AWS Deployment"
+echo "🚀 SunYield - Quick Setup for AWS Deployment"
 echo "================================================="
 
 # Create deployment directory if it doesn't exist
@@ -35,7 +35,7 @@ cat > $DEPLOY_DIR/create-project-archive.sh << 'EOF'
 echo "📦 Creating project archive for upload..."
 
 # Create archive excluding unnecessary files
-tar -czf solar-capital-project.tar.gz \
+tar -czf sunyield-project.tar.gz \
     --exclude='node_modules' \
     --exclude='target' \
     --exclude='build' \
@@ -46,9 +46,9 @@ tar -czf solar-capital-project.tar.gz \
     deploy-frontend-improved.sh \
     *.sql
 
-echo "✅ Archive created: solar-capital-project.tar.gz"
+echo "✅ Archive created: sunyield-project.tar.gz"
 echo "📤 Upload this file to your EC2 instance and extract with:"
-echo "   tar -xzf solar-capital-project.tar.gz"
+echo "   tar -xzf sunyield-project.tar.gz"
 EOF
 
 chmod +x $DEPLOY_DIR/create-project-archive.sh

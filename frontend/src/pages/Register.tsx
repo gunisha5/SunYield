@@ -70,7 +70,7 @@ const Register: React.FC = () => {
           
           {/* Title */}
           <h2 className="mt-8 text-center text-4xl font-black text-gray-900 gradient-text">
-            Join Solar Capital
+            Join SunYield
           </h2>
           <p className="mt-4 text-center text-lg text-gray-600">
             Create your account and start investing in solar energy
@@ -264,7 +264,7 @@ const Register: React.FC = () => {
               {isLoading ? (
                 <div className="loading-spinner"></div>
               ) : (
-                'Create Solar Capital Account'
+                'Create SunYield Account'
               )}
             </button>
           </div>
@@ -286,7 +286,7 @@ const Register: React.FC = () => {
 
         {/* Benefits Section */}
         <div className="mt-8 p-6 bg-white rounded-2xl shadow-lg border border-green-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Why Join Solar Capital?</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Why Join SunYield?</h3>
           <div className="space-y-3">
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>

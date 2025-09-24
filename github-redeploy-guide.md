@@ -14,7 +14,7 @@ This guide will help you replace your current project in your GitHub repository 
 ### 1.1 Backup Database Configuration
 Your current RDS configuration is in `backend/src/main/resources/application-prod.properties`:
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/solarcapital?allowPublicKeyRetrieval=true&useSSL=false
+spring.datasource.url=jdbc:mysql://localhost:3306/sunyield?allowPublicKeyRetrieval=true&useSSL=false
 spring.datasource.username=root
 spring.datasource.password=password
 ```
@@ -25,10 +25,10 @@ spring.datasource.password=password
 Before replacing, backup your current deployment:
 ```bash
 # On your EC2 instance
-sudo systemctl stop solarcapital-backend
+sudo systemctl stop sunyield-backend
 sudo systemctl stop nginx
-sudo cp -r /opt/solarcapital /opt/solarcapital-backup
-sudo cp -r /var/www/solarcapital /var/www/solarcapital-backup
+sudo cp -r /opt/sunyield /opt/sunyield-backup
+sudo cp -r /var/www/sunyield /var/www/sunyield-backup
 ```
 
 ## Step 2: Update Configuration Files
@@ -37,7 +37,7 @@ sudo cp -r /var/www/solarcapital /var/www/solarcapital-backup
 Update `backend/src/main/resources/application-prod.properties` with your actual RDS details:
 ```properties
 # Replace with your actual RDS endpoint
-spring.datasource.url=jdbc:mysql://YOUR_RDS_ENDPOINT:3306/solarcapital?allowPublicKeyRetrieval=true&useSSL=false
+spring.datasource.url=jdbc:mysql://YOUR_RDS_ENDPOINT:3306/sunyield?allowPublicKeyRetrieval=true&useSSL=false
 spring.datasource.username=YOUR_RDS_USERNAME
 spring.datasource.password=YOUR_RDS_PASSWORD
 ```
@@ -57,7 +57,7 @@ Update the deployment scripts with your actual domain names and IP addresses.
 ```bash
 git init
 git add .
-git commit -m "Initial commit - Solar Capital project"
+git commit -m "Initial commit - SunYield project"
 ```
 
 ### 3.2 Add GitHub Remote
@@ -81,9 +81,9 @@ ssh -i your-key.pem ec2-user@YOUR_EC2_IP
 ### 4.2 Clone Updated Repository
 ```bash
 cd /home/ec2-user
-rm -rf solarcapital-backend  # Remove old files
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git solarcapital-backend
-cd solarcapital-backend
+rm -rf sunyield-backend  # Remove old files
+git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git sunyield-backend
+cd sunyield-backend
 ```
 
 ### 4.3 Deploy Backend
@@ -102,8 +102,8 @@ chmod +x deploy-frontend.sh
 
 ### 5.1 Check Backend Status
 ```bash
-sudo systemctl status solarcapital-backend
-sudo journalctl -u solarcapital-backend -f
+sudo systemctl status sunyield-backend
+sudo journalctl -u sunyield-backend -f
 ```
 
 ### 5.2 Check Frontend Status
@@ -135,7 +135,7 @@ If you have a domain name:
    - Ensure RDS is publicly accessible or in same VPC
 
 2. **Backend Won't Start**
-   - Check logs: `sudo journalctl -u solarcapital-backend -f`
+   - Check logs: `sudo journalctl -u sunyield-backend -f`
    - Verify Java and Maven installation
    - Check port 8080 is not in use
 
@@ -169,15 +169,15 @@ If you have a domain name:
 If deployment fails:
 ```bash
 # Stop new services
-sudo systemctl stop solarcapital-backend
+sudo systemctl stop sunyield-backend
 sudo systemctl stop nginx
 
 # Restore from backup
-sudo cp -r /opt/solarcapital-backup /opt/solarcapital
-sudo cp -r /var/www/solarcapital-backup /var/www/solarcapital
+sudo cp -r /opt/sunyield-backup /opt/sunyield
+sudo cp -r /var/www/sunyield-backup /var/www/sunyield
 
 # Restart services
-sudo systemctl start solarcapital-backend
+sudo systemctl start sunyield-backend
 sudo systemctl start nginx
 ```
 

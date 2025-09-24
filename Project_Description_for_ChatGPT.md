@@ -1,8 +1,8 @@
-# Solar Capital - Project Description for Report Generation
+# SunYield - Project Description for Report Generation
 
 ## Project Overview
 
-**Project Name:** Solar Capital - Renewable Energy Investment Platform  
+**Project Name:** SunYield - Renewable Energy Investment Platform  
 **Student Name:** Gunisha Aggarwal  
 **Roll Number:** 2022a1r112  
 **Project Type:** Full-Stack Web Application  
@@ -10,7 +10,7 @@
 
 ## Project Description
 
-Solar Capital is a comprehensive web-based platform that enables individuals to invest in renewable energy projects. The platform bridges the gap between renewable energy developers and potential investors, providing a secure and transparent investment ecosystem.
+SunYield is a comprehensive web-based platform that enables individuals to invest in renewable energy projects. The platform bridges the gap between renewable energy developers and potential investors, providing a secure and transparent investment ecosystem.
 
 ### Key Features
 - User registration and authentication with OTP verification
@@ -352,4 +352,6 @@ Solar Capital is a comprehensive web-based platform that enables individuals to 
 ---
 
 **Note for ChatGPT:** Please use this project description to generate comprehensive, academic-quality content for a college project report. Focus on technical depth, clear explanations, and professional presentation. Include relevant code examples, architecture diagrams, and screenshots where appropriate. Maintain consistency with the provided structure and ensure all content is original and well-researched.
+
+
 

@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Enhanced Backend Deployment Script for AWS EC2
-echo "🚀 Starting Solar Capital Backend Deployment..."
+echo "🚀 Starting SunYield Backend Deployment..."
 
 # Set variables
-APP_DIR="/opt/solarcapital"
-LOG_DIR="/var/log/solarcapital"
-SERVICE_NAME="solarcapital-backend"
+APP_DIR="/opt/sunyield"
+LOG_DIR="/var/log/sunyield"
+SERVICE_NAME="sunyield-backend"
 
 # Check if running as ec2-user
 if [ "$(whoami)" != "ec2-user" ]; then
@@ -53,12 +53,12 @@ sleep 10
 echo "🔐 Setting up MySQL database..."
 mysql -u root << EOF
 ALTER USER 'root'@'localhost' IDENTIFIED BY 'password';
-CREATE DATABASE IF NOT EXISTS solarcapital;
+CREATE DATABASE IF NOT EXISTS sunyield;
 FLUSH PRIVILEGES;
 EOF
 
 # Test database connection
-mysql -u root -ppassword -e "SHOW DATABASES;" | grep solarcapital
+mysql -u root -ppassword -e "SHOW DATABASES;" | grep sunyield
 if [ $? -ne 0 ]; then
     echo "❌ Database setup failed"
     exit 1
@@ -106,7 +106,7 @@ fi
 echo "⚙️ Creating systemd service..."
 sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null <<EOF
 [Unit]
-Description=Solar Capital Backend
+Description=SunYield Backend
 After=network.target mysqld.service
 Wants=mysqld.service
 

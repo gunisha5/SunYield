@@ -23,7 +23,7 @@ const Login: React.FC = () => {
     try {
       setIsLoading(true);
       await loginWithCredentials(data.email, data.password);
-      navigate('/app/dashboard');
+      navigate('/');
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.response?.data?.message || 'Login failed. Please try again.');
@@ -58,7 +58,7 @@ const Login: React.FC = () => {
             Welcome Back
           </h2>
           <p className="mt-4 text-center text-lg text-gray-600">
-            Sign in to your Solar Capital account
+            Sign in to your SunYield account
           </p>
           <p className="mt-2 text-center text-sm text-gray-500">
             Don't have an account?{' '}
@@ -157,9 +157,9 @@ const Login: React.FC = () => {
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-semibold text-green-600 hover:text-green-700 transition-colors duration-300">
+              <Link to="/forgot-password" className="font-semibold text-green-600 hover:text-green-700 transition-colors duration-300">
                 Forgot password?
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -183,7 +183,7 @@ const Login: React.FC = () => {
               {isLoading ? (
                 <div className="loading-spinner"></div>
               ) : (
-                'Sign In to Solar Capital'
+                'Sign In to SunYield'
               )}
             </button>
           </div>

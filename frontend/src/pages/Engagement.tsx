@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { engagementAPI, projectsAPI } from '../services/api';
+import { engagementAPI, projectsAPI, walletAPI, couponAPI } from '../services/api';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
-import { EngagementTransaction, EngagementStats, Project } from '../types';
+import { EngagementTransaction, EngagementStats, Project, Coupon } from '../types';
+import WalletFundingModal from '../components/WalletFundingModal';
 import { 
   TrendingUp, 
   Heart, 
@@ -16,7 +17,9 @@ import {
   AlertCircle,
   Zap,
   Sparkles,
-  Target
+  Target,
+  XCircle,
+  CheckCircle
 } from 'lucide-react';
 
 const Engagement: React.FC = () => {
@@ -35,6 +38,17 @@ const Engagement: React.FC = () => {
   const [selectedProject, setSelectedProject] = useState<number | ''>('');
   const [amount, setAmount] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
+  
+  // Wallet and coupon states
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [showWalletFundingModal, setShowWalletFundingModal] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  
+  // Success modal states
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successData, setSuccessData] = useState<any>(null);
 
   useEffect(() => {
     if (user) {
@@ -45,21 +59,84 @@ const Engagement: React.FC = () => {
   const fetchEngagementData = async () => {
     try {
       setLoading(true);
-      const [statsData, projectsData, historyData] = await Promise.all([
+      const [statsData, projectsData, historyData, walletData] = await Promise.all([
         engagementAPI.getEngagementStats(),
         projectsAPI.getActiveProjects(),
-        engagementAPI.getEngagementHistory()
+        engagementAPI.getEngagementHistory(),
+        walletAPI.getWallet()
       ]);
       
       setStats(statsData.data);
       setProjects(projectsData.data);
       setHistory(historyData.data);
+      setWalletBalance(walletData.data.balance || 0);
     } catch (error: any) {
       console.error('Error fetching engagement data:', error);
       toast.error('Failed to load engagement data');
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchWalletBalance = async () => {
+    try {
+      const response = await walletAPI.getWallet();
+      setWalletBalance(response.data.balance || 0);
+    } catch (error) {
+      console.error('Error fetching wallet balance:', error);
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast.error('Please enter a coupon code');
+      return;
+    }
+
+    setCouponLoading(true);
+    try {
+      const response = await couponAPI.validateCoupon(couponCode, parseFloat(amount || '0'));
+      if (response.data.valid) {
+        setAppliedCoupon({
+          id: 0,
+          code: couponCode,
+          name: couponCode,
+          description: 'Applied coupon',
+          discountValue: response.data.discount,
+          discountType: 'FIXED',
+          minAmount: 0,
+          maxDiscount: response.data.discount,
+          maxUsage: 1,
+          currentUsage: 0,
+          validFrom: new Date().toISOString(),
+          validUntil: new Date().toISOString(),
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        toast.success(`Coupon applied! ₹${response.data.discount.toLocaleString()} discount`);
+      } else {
+        toast.error(response.data.message || 'Invalid or expired coupon code');
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to apply coupon');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    toast.success('Coupon removed');
+  };
+
+  const resetFormStates = () => {
+    setSelectedProject('');
+    setAmount('');
+    setRecipientEmail('');
+    setCouponCode('');
+    setAppliedCoupon(null);
   };
 
   const handleReinvest = async () => {
@@ -69,11 +146,24 @@ const Engagement: React.FC = () => {
     }
 
     try {
-      await engagementAPI.reinvest({
+      const response = await engagementAPI.reinvest({
         projectId: selectedProject as number,
         amount: parseFloat(amount)
       });
-      toast.success('Reinvestment successful!');
+      
+      // Find the project name
+      const project = projects.find(p => p.id === selectedProject);
+      
+      // Set success data and show success modal
+      setSuccessData({
+        type: 'reinvest',
+        projectName: project?.name || 'Selected Project',
+        amount: parseFloat(amount),
+        newBalance: response.data?.newBalance || stats?.availableCredits
+      });
+      setShowSuccessModal(true);
+      
+      // Close the reinvest modal
       setShowReinvestModal(false);
       setSelectedProject('');
       setAmount('');
@@ -91,11 +181,24 @@ const Engagement: React.FC = () => {
     }
 
     try {
-      await engagementAPI.donate({
+      const response = await engagementAPI.donate({
         projectId: selectedProject as number,
         amount: parseFloat(amount)
       });
-      toast.success('Donation successful!');
+      
+      // Find the project name
+      const project = projects.find(p => p.id === selectedProject);
+      
+      // Set success data and show success modal
+      setSuccessData({
+        type: 'donate',
+        projectName: project?.name || 'Selected Project',
+        amount: parseFloat(amount),
+        newBalance: response.data?.newBalance || stats?.availableCredits
+      });
+      setShowSuccessModal(true);
+      
+      // Close the donate modal
       setShowDonateModal(false);
       setSelectedProject('');
       setAmount('');
@@ -119,11 +222,21 @@ const Engagement: React.FC = () => {
     }
 
     try {
-      await engagementAPI.gift({
+      const response = await engagementAPI.gift({
         recipientEmail,
         amount: parseFloat(amount)
       });
-      toast.success('Gift sent successfully!');
+      
+      // Set success data and show success modal
+      setSuccessData({
+        type: 'gift',
+        recipientEmail: recipientEmail,
+        amount: parseFloat(amount),
+        newBalance: response.data?.newBalance || stats?.availableCredits
+      });
+      setShowSuccessModal(true);
+      
+      // Close the gift modal
       setShowGiftModal(false);
       setRecipientEmail('');
       setAmount('');
@@ -199,9 +312,9 @@ const Engagement: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="text-center">
+      <div className="text-left">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Engagement Center</h1>
-        <p className="text-gray-600 max-w-2xl mx-auto">
+        <p className="text-gray-600 max-w-2xl">
           Reinvest your earnings, donate to solar projects, and gift credits to other users. 
           Make a positive impact on renewable energy while growing your portfolio.
         </p>
@@ -279,6 +392,7 @@ const Engagement: React.FC = () => {
           </div>
         </div>
       )}
+
 
       {/* Action Buttons */}
       <div className="card">
@@ -424,21 +538,125 @@ const Engagement: React.FC = () => {
       {/* Reinvest Modal */}
       {showReinvestModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md transform transition-all duration-300">
-            <div className="text-center mb-6">
-              <div className="p-3 bg-blue-100 rounded-full w-12 h-12 mx-auto mb-4 flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-blue-600" />
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="flex items-center space-x-4">
+                <TrendingUp className="h-8 w-8 text-blue-600" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Reinvest in Project</h2>
+                  <p className="text-sm text-gray-600">Grow your portfolio by reinvesting earnings</p>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900">Reinvest in Project</h3>
-              <p className="text-gray-600">Grow your portfolio by reinvesting earnings</p>
+              <button
+                onClick={() => {
+                  setShowReinvestModal(false);
+                  resetFormStates();
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
             </div>
-            <div className="space-y-6">
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Project Summary */}
+              {selectedProject && (
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Project Summary</h4>
+                  <div className="space-y-2">
+                    {(() => {
+                      const project = projects.find(p => p.id === selectedProject);
+                      return project ? (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Project:</span>
+                            <span className="font-medium">{project.name}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Location:</span>
+                            <span className="font-medium">{project.location}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Capacity:</span>
+                            <span className="font-medium">{project.energyCapacity} MW</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Efficiency:</span>
+                            <span className="font-medium">{(project.efficiency || 'MEDIUM').toUpperCase()}</span>
+                          </div>
+                        </>
+                      ) : null;
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Wallet Balance */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Available Balance</h4>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Wallet Balance:</span>
+                  <span className="text-2xl font-bold text-gray-900">₹{walletBalance.toLocaleString()}</span>
+                </div>
+                {walletBalance < parseFloat(amount || '0') && (
+                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800 mb-2">Insufficient balance for this transaction</p>
+                    <button
+                      onClick={() => setShowWalletFundingModal(true)}
+                      className="text-sm bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+                    >
+                      Add Funds
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Coupon Section */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Apply Coupon (Optional)</h4>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    placeholder="Enter coupon code"
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    onClick={handleApplyCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {couponLoading ? 'Applying...' : 'Apply'}
+                  </button>
+                </div>
+                {appliedCoupon && (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-green-800">Coupon Applied: {appliedCoupon.code}</p>
+                        <p className="text-xs text-green-600">Discount: ₹{appliedCoupon.discountValue.toLocaleString()}</p>
+                      </div>
+                      <button
+                        onClick={handleRemoveCoupon}
+                        className="text-sm text-green-600 hover:text-green-800"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Project Selection */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Select Project</label>
                 <select
                   value={selectedProject}
                   onChange={(e) => setSelectedProject(Number(e.target.value))}
-                  className="form-input w-full"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Choose a project...</option>
                   {projects.map((project) => (
@@ -448,33 +666,36 @@ const Engagement: React.FC = () => {
                   ))}
                 </select>
               </div>
+
+              {/* Amount Input */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Amount (₹)</label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="form-input w-full"
-                  placeholder="Enter amount"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter amount to reinvest"
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  Available credits: ₹{stats?.availableCredits?.toLocaleString() || '0'}
+                  Available balance: ₹{walletBalance.toLocaleString()}
                 </p>
               </div>
-              <div className="flex space-x-3">
+
+              {/* Action Buttons */}
+              <div className="flex space-x-4">
                 <button
                   onClick={handleReinvest}
-                  className="btn-primary flex-1"
+                  className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
                 >
-                  Reinvest
+                  Reinvest Now
                 </button>
                 <button
                   onClick={() => {
                     setShowReinvestModal(false);
-                    setSelectedProject('');
-                    setAmount('');
+                    resetFormStates();
                   }}
-                  className="btn-secondary flex-1"
+                  className="flex-1 bg-gray-200 text-gray-800 py-3 px-6 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
@@ -487,21 +708,125 @@ const Engagement: React.FC = () => {
       {/* Donate Modal */}
       {showDonateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md transform transition-all duration-300">
-            <div className="text-center mb-6">
-              <div className="p-3 bg-red-100 rounded-full w-12 h-12 mx-auto mb-4 flex items-center justify-center">
-                <Heart className="h-6 w-6 text-red-600" />
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gradient-to-r from-red-50 to-pink-50">
+              <div className="flex items-center space-x-4">
+                <Heart className="h-8 w-8 text-red-600" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Donate to Project</h2>
+                  <p className="text-sm text-gray-600">Support solar energy projects and make a difference</p>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900">Donate to Project</h3>
-              <p className="text-gray-600">Support solar energy projects and make a difference</p>
+              <button
+                onClick={() => {
+                  setShowDonateModal(false);
+                  resetFormStates();
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
             </div>
-            <div className="space-y-6">
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Project Summary */}
+              {selectedProject && (
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Project Summary</h4>
+                  <div className="space-y-2">
+                    {(() => {
+                      const project = projects.find(p => p.id === selectedProject);
+                      return project ? (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Project:</span>
+                            <span className="font-medium">{project.name}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Location:</span>
+                            <span className="font-medium">{project.location}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Capacity:</span>
+                            <span className="font-medium">{project.energyCapacity} MW</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Efficiency:</span>
+                            <span className="font-medium">{(project.efficiency || 'MEDIUM').toUpperCase()}</span>
+                          </div>
+                        </>
+                      ) : null;
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Wallet Balance */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Available Balance</h4>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Wallet Balance:</span>
+                  <span className="text-2xl font-bold text-gray-900">₹{walletBalance.toLocaleString()}</span>
+                </div>
+                {walletBalance < parseFloat(amount || '0') && (
+                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800 mb-2">Insufficient balance for this transaction</p>
+                    <button
+                      onClick={() => setShowWalletFundingModal(true)}
+                      className="text-sm bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+                    >
+                      Add Funds
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Coupon Section */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Apply Coupon (Optional)</h4>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    placeholder="Enter coupon code"
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  />
+                  <button
+                    onClick={handleApplyCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {couponLoading ? 'Applying...' : 'Apply'}
+                  </button>
+                </div>
+                {appliedCoupon && (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-green-800">Coupon Applied: {appliedCoupon.code}</p>
+                        <p className="text-xs text-green-600">Discount: ₹{appliedCoupon.discountValue.toLocaleString()}</p>
+                      </div>
+                      <button
+                        onClick={handleRemoveCoupon}
+                        className="text-sm text-green-600 hover:text-green-800"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Project Selection */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Select Project</label>
                 <select
                   value={selectedProject}
                   onChange={(e) => setSelectedProject(Number(e.target.value))}
-                  className="form-input w-full"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 >
                   <option value="">Choose a project...</option>
                   {projects.map((project) => (
@@ -511,33 +836,36 @@ const Engagement: React.FC = () => {
                   ))}
                 </select>
               </div>
+
+              {/* Amount Input */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Amount (₹)</label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="form-input w-full"
-                  placeholder="Enter amount"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="Enter amount to donate"
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  Available credits: ₹{stats?.availableCredits?.toLocaleString() || '0'}
+                  Available balance: ₹{walletBalance.toLocaleString()}
                 </p>
               </div>
-              <div className="flex space-x-3">
+
+              {/* Action Buttons */}
+              <div className="flex space-x-4">
                 <button
                   onClick={handleDonate}
-                  className="btn-primary flex-1 bg-red-600 hover:bg-red-700"
+                  className="flex-1 bg-red-600 text-white py-3 px-6 rounded-xl font-semibold hover:bg-red-700 transition-colors"
                 >
-                  Donate
+                  Donate Now
                 </button>
                 <button
                   onClick={() => {
                     setShowDonateModal(false);
-                    setSelectedProject('');
-                    setAmount('');
+                    resetFormStates();
                   }}
-                  className="btn-secondary flex-1"
+                  className="flex-1 bg-gray-200 text-gray-800 py-3 px-6 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
@@ -550,52 +878,130 @@ const Engagement: React.FC = () => {
       {/* Gift Modal */}
       {showGiftModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md transform transition-all duration-300">
-            <div className="text-center mb-6">
-              <div className="p-3 bg-purple-100 rounded-full w-12 h-12 mx-auto mb-4 flex items-center justify-center">
-                <Gift className="h-6 w-6 text-purple-600" />
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-indigo-50">
+              <div className="flex items-center space-x-4">
+                <Gift className="h-8 w-8 text-purple-600" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Gift Credits</h2>
+                  <p className="text-sm text-gray-600">Share your success with other users</p>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900">Gift Credits</h3>
-              <p className="text-gray-600">Share your success with other users</p>
+              <button
+                onClick={() => {
+                  setShowGiftModal(false);
+                  resetFormStates();
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
             </div>
-            <div className="space-y-6">
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Wallet Balance */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Available Balance</h4>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Wallet Balance:</span>
+                  <span className="text-2xl font-bold text-gray-900">₹{walletBalance.toLocaleString()}</span>
+                </div>
+                {walletBalance < parseFloat(amount || '0') && (
+                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800 mb-2">Insufficient balance for this transaction</p>
+                    <button
+                      onClick={() => setShowWalletFundingModal(true)}
+                      className="text-sm bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+                    >
+                      Add Funds
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Coupon Section */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Apply Coupon (Optional)</h4>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    placeholder="Enter coupon code"
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  />
+                  <button
+                    onClick={handleApplyCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {couponLoading ? 'Applying...' : 'Apply'}
+                  </button>
+                </div>
+                {appliedCoupon && (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-green-800">Coupon Applied: {appliedCoupon.code}</p>
+                        <p className="text-xs text-green-600">Discount: ₹{appliedCoupon.discountValue.toLocaleString()}</p>
+                      </div>
+                      <button
+                        onClick={handleRemoveCoupon}
+                        className="text-sm text-green-600 hover:text-green-800"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Recipient Email */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Recipient Email</label>
                 <input
                   type="email"
                   value={recipientEmail}
                   onChange={(e) => setRecipientEmail(e.target.value)}
-                  className="form-input w-full"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder="Enter recipient email"
                 />
+                <p className="text-xs text-gray-500 mt-2">
+                  The recipient must have an account on SunYield
+                </p>
               </div>
+
+              {/* Amount Input */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Amount (₹)</label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="form-input w-full"
-                  placeholder="Enter amount"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  placeholder="Enter amount to gift"
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  Available credits: ₹{stats?.availableCredits?.toLocaleString() || '0'}
+                  Available balance: ₹{walletBalance.toLocaleString()}
                 </p>
               </div>
-              <div className="flex space-x-3">
+
+              {/* Action Buttons */}
+              <div className="flex space-x-4">
                 <button
                   onClick={handleGift}
-                  className="btn-primary flex-1 bg-purple-600 hover:bg-purple-700"
+                  className="flex-1 bg-purple-600 text-white py-3 px-6 rounded-xl font-semibold hover:bg-purple-700 transition-colors"
                 >
                   Send Gift
                 </button>
                 <button
                   onClick={() => {
                     setShowGiftModal(false);
-                    setRecipientEmail('');
-                    setAmount('');
+                    resetFormStates();
                   }}
-                  className="btn-secondary flex-1"
+                  className="flex-1 bg-gray-200 text-gray-800 py-3 px-6 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
@@ -603,6 +1009,111 @@ const Engagement: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && successData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center">
+            <div className="mb-6">
+              <div className={`mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-4 ${
+                successData.type === 'reinvest' ? 'bg-blue-100' :
+                successData.type === 'donate' ? 'bg-red-100' :
+                'bg-purple-100'
+              }`}>
+                <CheckCircle className={`h-8 w-8 ${
+                  successData.type === 'reinvest' ? 'text-blue-600' :
+                  successData.type === 'donate' ? 'text-red-600' :
+                  'text-purple-600'
+                }`} />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {successData.type === 'reinvest' && 'Successfully Reinvested!'}
+                {successData.type === 'donate' && 'Donation Successful!'}
+                {successData.type === 'gift' && 'Gift Sent Successfully!'}
+              </h3>
+              <p className="text-gray-600">Your transaction has been processed successfully</p>
+            </div>
+            
+            <div className={`rounded-xl p-4 mb-6 ${
+              successData.type === 'reinvest' ? 'bg-blue-50' :
+              successData.type === 'donate' ? 'bg-red-50' :
+              'bg-purple-50'
+            }`}>
+              <div className="space-y-2">
+                {successData.type === 'reinvest' && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Project:</span>
+                      <span className="font-semibold text-gray-900">{successData.projectName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Amount Reinvested:</span>
+                      <span className="font-semibold text-green-600">₹{successData.amount.toLocaleString()}</span>
+                    </div>
+                  </>
+                )}
+                {successData.type === 'donate' && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Project:</span>
+                      <span className="font-semibold text-gray-900">{successData.projectName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Amount Donated:</span>
+                      <span className="font-semibold text-green-600">₹{successData.amount.toLocaleString()}</span>
+                    </div>
+                  </>
+                )}
+                {successData.type === 'gift' && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Recipient:</span>
+                      <span className="font-semibold text-gray-900">{successData.recipientEmail}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Amount Gifted:</span>
+                      <span className="font-semibold text-green-600">₹{successData.amount.toLocaleString()}</span>
+                    </div>
+                  </>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-600">New Wallet Balance:</span>
+                  <span className="font-semibold text-gray-900">₹{successData.newBalance?.toLocaleString() || '0'}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex space-x-4">
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  setSuccessData(null);
+                }}
+                className={`flex-1 text-white py-3 px-6 rounded-xl font-semibold transition-colors ${
+                  successData.type === 'reinvest' ? 'bg-blue-600 hover:bg-blue-700' :
+                  successData.type === 'donate' ? 'bg-red-600 hover:bg-red-700' :
+                  'bg-purple-600 hover:bg-purple-700'
+                }`}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wallet Funding Modal */}
+      {showWalletFundingModal && (
+        <WalletFundingModal
+          onClose={() => setShowWalletFundingModal(false)}
+          currentBalance={walletBalance}
+          onWalletUpdate={(newBalance) => {
+            setWalletBalance(newBalance);
+            setShowWalletFundingModal(false);
+            toast.success('Wallet funded successfully!');
+          }}
+        />
       )}
     </div>
   );

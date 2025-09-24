@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { walletAPI, projectsAPI, subscriptionsAPI, earningsAPI } from '../services/api';
-import { Project, Subscription, Wallet as WalletType } from '../types';
+import { walletAPI, projectsAPI, subscriptionsAPI, earningsAPI, engagementAPI } from '../services/api';
+import { Project, Subscription, Wallet as WalletType, EngagementTransaction } from '../types';
 import { 
   TrendingUp, 
   Zap, 
-  DollarSign, 
+  IndianRupee, 
   Users,
   ArrowUpRight,
   ArrowDownRight,
@@ -19,6 +19,7 @@ const Dashboard: React.FC = () => {
   const [wallet, setWallet] = useState<WalletType | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [reinvestments, setReinvestments] = useState<EngagementTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [monthlyIncome, setMonthlyIncome] = useState<number>(0);
   const navigate = useNavigate();
@@ -27,17 +28,24 @@ const Dashboard: React.FC = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const [walletData, projectsData, subscriptionsData, earningsData] = await Promise.all([
+        const [walletData, projectsData, subscriptionsData, earningsData, engagementData] = await Promise.all([
           walletAPI.getWallet(),
           projectsAPI.getActiveProjects(),
           subscriptionsAPI.getSubscriptionHistory(),
-          earningsAPI.getEarningsSummary()
+          earningsAPI.getEarningsSummary(),
+          engagementAPI.getEngagementHistory()
         ]);
 
         setWallet(walletData.data);
         setProjects(projectsData.data);
         setSubscriptions(subscriptionsData.data);
         setMonthlyIncome(earningsData.data.monthlyIncome || 0);
+        
+        // Filter only reinvestment transactions
+        const reinvestmentData = engagementData.data.filter(
+          (transaction: EngagementTransaction) => transaction.type === 'REINVEST'
+        );
+        setReinvestments(reinvestmentData);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -48,13 +56,32 @@ const Dashboard: React.FC = () => {
     fetchDashboardData();
   }, [user]); // Add user as dependency
 
+  // Calculate total investment including reinvestments for a project
+  const getTotalInvestment = (projectId: number) => {
+    const subscription = subscriptions.find(s => s.project?.id === projectId);
+    const projectReinvestments = reinvestments.filter(r => r.project?.id === projectId);
+    
+    const initialInvestment = subscription?.contributionAmount || 0;
+    const reinvestmentTotal = projectReinvestments.reduce((sum, r) => sum + r.amount, 0);
+    
+    console.log(`[DEBUG] Project ${projectId} investment calculation:`, {
+      subscription: subscription,
+      initialInvestment,
+      projectReinvestments,
+      reinvestmentTotal,
+      total: initialInvestment + reinvestmentTotal
+    });
+    
+    return initialInvestment + reinvestmentTotal;
+  };
+
   const stats = [
     {
       name: 'Total Balance',
       value: `₹${wallet?.balance?.toLocaleString() || '0'}`,
       change: '+12.5%',
       changeType: 'positive' as const,
-      icon: DollarSign,
+      icon: IndianRupee,
     },
     {
       name: 'Total Earnings',
@@ -162,7 +189,10 @@ const Dashboard: React.FC = () => {
                       {subscription.project.name}
                     </p>
                     <p className="text-xs text-gray-500">
-                      ₹{subscription.project.subscriptionPrice.toLocaleString()}
+                      ₹{getTotalInvestment(subscription.project.id).toLocaleString()}
+                      {getTotalInvestment(subscription.project.id) > (subscription.contributionAmount || 0) && (
+                        <span className="text-blue-600 ml-1">(+reinvestments)</span>
+                      )}
                     </p>
                   </div>
                   <div className="flex items-center">
@@ -200,22 +230,51 @@ const Dashboard: React.FC = () => {
           <h3 className="text-lg font-medium text-gray-900 mb-4">Active Projects</h3>
           {projects.length > 0 ? (
             <div className="space-y-4">
-              {projects.slice(0, 3).map((project) => (
-                <div key={project.id} className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{project.name}</p>
-                    <p className="text-xs text-gray-500">{project.location}</p>
+              {projects.slice(0, 3).map((project) => {
+                // Show minimum contribution for projects user hasn't subscribed to
+                // Show actual investment amount for projects user has subscribed to
+                const userSubscription = subscriptions.find(sub => sub.project.id === project.id);
+                const displayAmount = userSubscription ? getTotalInvestment(project.id) : (project.minContribution || project.subscriptionPrice || 999);
+                const isUserSubscribed = !!userSubscription;
+                const isExpired = (project.operationalValidityYear || 2025) < new Date().getFullYear();
+                
+                return (
+                  <div key={project.id} className={`flex items-center justify-between p-3 rounded-lg border ${
+                    isExpired ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-200'
+                  }`}>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <p className={`text-sm font-medium ${isExpired ? 'text-gray-500' : 'text-gray-900'}`}>
+                          {project.name}
+                        </p>
+                        {isExpired && (
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                            Expired
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500">{project.location}</p>
+                      <p className="text-xs text-gray-500">
+                        Validity: {project.operationalValidityYear || 2025}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-medium ${isExpired ? 'text-gray-500' : 'text-gray-900'}`}>
+                        ₹{displayAmount.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {project.energyCapacity} MW
+                        {isUserSubscribed && <span className="text-green-600 ml-1">• Subscribed</span>}
+                        {!isExpired && (
+                          <span className="text-green-600 ml-1">
+                            • Earn ₹{Math.round(displayAmount * 0.012 * 5)}/month
+                          </span>
+                        )}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">
-                      ₹{project.subscriptionPrice.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {project.energyCapacity} MW
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {projects.length > 3 && (
                 <button
                   onClick={() => navigate('/app/projects')}

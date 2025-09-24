@@ -15,11 +15,12 @@ import {
   Trash2,
   DollarSign,
   Zap,
-  Image
+  Image,
+  Tag
 } from 'lucide-react';
 import ProjectImageUpload from '../components/ProjectImageUpload';
-import { adminAPI } from '../services/api';
-import { DashboardStats, User, Project, KYC } from '../types';
+import { adminAPI, couponAPI } from '../services/api';
+import { DashboardStats, User, Project, KYC, Coupon } from '../types';
 
 interface KYCData {
   id: number;
@@ -49,13 +50,33 @@ const AdminDashboard: React.FC = () => {
     location: '',
     energyCapacity: 0,
     subscriptionPrice: 0,
+    minContribution: 999,
+    efficiency: 'MEDIUM',
+    operationalValidityYear: 2025,
+    description: '',
     status: 'ACTIVE'
-  });
+  }); // Updated for Solar Capital
   const [pendingPayments, setPendingPayments] = useState<any[]>([]);
   const [monthlyWithdrawalCap, setMonthlyWithdrawalCap] = useState<number>(3000);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [showImageUploadModal, setShowImageUploadModal] = useState(false);
   const [selectedProjectForImage, setSelectedProjectForImage] = useState<Project | null>(null);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [showCouponModal, setShowCouponModal] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
+  const [newCoupon, setNewCoupon] = useState<Omit<Coupon, 'id' | 'currentUsage' | 'createdAt' | 'updatedAt'>>({
+    code: '',
+    name: '',
+    description: '',
+    discountType: 'PERCENTAGE',
+    discountValue: 0,
+    minAmount: 0,
+    maxDiscount: 0,
+    maxUsage: 0,
+    isActive: true,
+    validFrom: undefined,
+    validUntil: undefined
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -71,7 +92,8 @@ const AdminDashboard: React.FC = () => {
         fetchProjects(),
         fetchKycData(),
         fetchPendingPayments(),
-        fetchMonthlyWithdrawalCap()
+        fetchMonthlyWithdrawalCap(),
+        fetchCoupons()
       ]);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -101,6 +123,7 @@ const AdminDashboard: React.FC = () => {
   const fetchProjects = async () => {
     try {
       const response = await adminAPI.getAllProjects();
+      console.log('[DEBUG] Fetched projects:', response.data);
       setProjects(response.data);
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -134,10 +157,19 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const fetchCoupons = async () => {
+    try {
+      const response = await couponAPI.getAllCoupons();
+      setCoupons(response.data);
+    } catch (error) {
+      console.error('Error fetching coupons:', error);
+    }
+  };
+
   const updateMonthlyWithdrawalCap = async (newCap: number) => {
     try {
       const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:8080/admin/config/monthly-withdrawal-cap', {
+      const response = await fetch('http://localhost:8080/api/admin/config/monthly-withdrawal-cap', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${adminToken}`,
@@ -164,7 +196,7 @@ const AdminDashboard: React.FC = () => {
   const approveKyc = async (kycId: number) => {
     try {
       const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/admin/kyc/${kycId}/approve`, {
+      const response = await fetch(`http://localhost:8080/api/admin/kyc/${kycId}/approve`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${adminToken}`,
@@ -188,7 +220,7 @@ const AdminDashboard: React.FC = () => {
   const rejectKyc = async (kycId: number) => {
     try {
       const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/admin/kyc/${kycId}/reject`, {
+      const response = await fetch(`http://localhost:8080/api/admin/kyc/${kycId}/reject`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${adminToken}`,
@@ -213,7 +245,7 @@ const AdminDashboard: React.FC = () => {
   const updateUserRole = async (userId: number, newRole: 'USER' | 'ADMIN') => {
     try {
       const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/admin/users/${userId}/role`, {
+      const response = await fetch(`http://localhost:8080/api/admin/users/${userId}/role`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${adminToken}`,
@@ -237,26 +269,12 @@ const AdminDashboard: React.FC = () => {
 
   const updateProjectStatus = async (projectId: number, newStatus: 'ACTIVE' | 'PAUSED') => {
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/admin/projects/${projectId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        toast.success('Project status updated successfully!');
-        fetchProjects();
-      } else {
-        const error = await response.text();
-        toast.error(error || 'Failed to update project status');
-      }
-    } catch (error) {
+      await adminAPI.updateProjectStatus(projectId, newStatus);
+      toast.success('Project status updated successfully!');
+      fetchProjects();
+    } catch (error: any) {
       console.error('Error updating project status:', error);
-      toast.error('Failed to update project status');
+      toast.error(error.response?.data?.message || 'Failed to update project status');
     }
   };
 
@@ -269,28 +287,16 @@ const AdminDashboard: React.FC = () => {
     if (!editingProject) return;
 
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/admin/projects/${editingProject.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(editingProject),
-      });
-
-      if (response.ok) {
-        toast.success('Project updated successfully!');
-        setShowEditModal(false);
-        setEditingProject(null);
-        fetchProjects();
-      } else {
-        const error = await response.text();
-        toast.error(error || 'Failed to update project');
-      }
-    } catch (error) {
+      console.log('[DEBUG] Updating project with data:', editingProject);
+      await adminAPI.updateProject(editingProject.id, editingProject);
+      console.log('[DEBUG] Project update successful, refreshing data...');
+      toast.success('Project updated successfully!');
+      setShowEditModal(false);
+      setEditingProject(null);
+      fetchProjects();
+    } catch (error: any) {
       console.error('Error updating project:', error);
-      toast.error('Failed to update project');
+      toast.error(error.response?.data?.message || 'Failed to update project');
     }
   };
 
@@ -300,65 +306,42 @@ const AdminDashboard: React.FC = () => {
     }
 
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/admin/projects/${projectId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        toast.success('Project deleted successfully!');
-        fetchProjects();
-      } else {
-        const error = await response.text();
-        toast.error(error || 'Failed to delete project');
-      }
-    } catch (error) {
+      await adminAPI.deleteProject(projectId);
+      toast.success('Project deleted successfully!');
+      fetchProjects();
+    } catch (error: any) {
       console.error('Error deleting project:', error);
-      toast.error('Failed to delete project');
+      toast.error(error.response?.data?.message || 'Failed to delete project');
     }
   };
 
   const createProject = async () => {
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/admin/projects`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newProject),
+      await adminAPI.createProject(newProject);
+      toast.success('Project created successfully!');
+      setShowCreateModal(false);
+      setNewProject({
+        name: '',
+        location: '',
+        energyCapacity: 0,
+        subscriptionPrice: 0,
+        minContribution: 999,
+        efficiency: 'MEDIUM',
+        operationalValidityYear: 2025,
+        description: '',
+        status: 'ACTIVE'
       });
-
-      if (response.ok) {
-        toast.success('Project created successfully!');
-        setShowCreateModal(false);
-        setNewProject({
-          name: '',
-          location: '',
-          energyCapacity: 0,
-          subscriptionPrice: 0,
-          status: 'ACTIVE'
-        });
-        fetchProjects();
-      } else {
-        const error = await response.text();
-        toast.error(error || 'Failed to create project');
-      }
-    } catch (error) {
+      fetchProjects();
+    } catch (error: any) {
       console.error('Error creating project:', error);
-      toast.error('Failed to create project');
+      toast.error(error.response?.data?.message || 'Failed to create project');
     }
   };
 
   const approvePayment = async (orderId: string) => {
     try {
       const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/admin/subscriptions/${orderId}/approve`, {
+      const response = await fetch(`http://localhost:8080/api/admin/subscriptions/${orderId}/approve`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${adminToken}`,
@@ -382,7 +365,7 @@ const AdminDashboard: React.FC = () => {
   const rejectPayment = async (orderId: string) => {
     try {
       const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/admin/subscriptions/${orderId}/reject`, {
+      const response = await fetch(`http://localhost:8080/api/admin/subscriptions/${orderId}/reject`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${adminToken}`,
@@ -406,7 +389,7 @@ const AdminDashboard: React.FC = () => {
   const addCreditsToUser = async (userId: number, amount: number) => {
     try {
       const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/admin/users/${userId}/add-credits`, {
+      const response = await fetch(`http://localhost:8080/api/admin/users/${userId}/add-credits`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${adminToken}`,
@@ -433,7 +416,7 @@ const AdminDashboard: React.FC = () => {
   const addEnergyToProject = async (projectId: number, energyAmount: number) => {
     try {
       const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/admin/projects/${projectId}/add-energy`, {
+      const response = await fetch(`http://localhost:8080/api/projects/admin/${projectId}/add-energy`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${adminToken}`,
@@ -457,6 +440,75 @@ const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error('Error adding energy data:', error);
       toast.error('Failed to add energy data');
+    }
+  };
+
+  // Coupon Management Functions
+  const openCouponModal = (coupon?: Coupon) => {
+    if (coupon) {
+      setEditingCoupon(coupon);
+      setNewCoupon({
+        code: coupon.code,
+        name: coupon.name,
+        description: coupon.description,
+        discountType: coupon.discountType,
+        discountValue: coupon.discountValue,
+        minAmount: coupon.minAmount || 0,
+        maxDiscount: coupon.maxDiscount || 0,
+        maxUsage: coupon.maxUsage || 0,
+        isActive: coupon.isActive,
+        validFrom: coupon.validFrom,
+        validUntil: coupon.validUntil
+      });
+    } else {
+      setEditingCoupon(null);
+      setNewCoupon({
+        code: '',
+        name: '',
+        description: '',
+        discountType: 'PERCENTAGE',
+        discountValue: 0,
+        minAmount: 0,
+        maxDiscount: 0,
+        maxUsage: 0,
+        isActive: true,
+        validFrom: undefined,
+        validUntil: undefined
+      });
+    }
+    setShowCouponModal(true);
+  };
+
+  const saveCoupon = async () => {
+    try {
+      if (editingCoupon) {
+        const response = await couponAPI.updateCoupon(editingCoupon.id, newCoupon);
+        toast.success('Coupon updated successfully!');
+      } else {
+        const response = await couponAPI.createCoupon(newCoupon);
+        toast.success('Coupon created successfully!');
+      }
+      setShowCouponModal(false);
+      setEditingCoupon(null);
+      fetchCoupons();
+    } catch (error: any) {
+      console.error(`Error ${editingCoupon ? 'updating' : 'creating'} coupon:`, error);
+      toast.error(error.response?.data?.message || `Failed to ${editingCoupon ? 'update' : 'create'} coupon`);
+    }
+  };
+
+  const deleteCoupon = async (couponId: number) => {
+    if (!window.confirm('Are you sure you want to delete this coupon? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await couponAPI.deleteCoupon(couponId);
+      toast.success('Coupon deleted successfully!');
+      fetchCoupons();
+    } catch (error: any) {
+      console.error('Error deleting coupon:', error);
+      toast.error(error.response?.data?.message || 'Failed to delete coupon');
     }
   };
 
@@ -588,10 +640,12 @@ const AdminDashboard: React.FC = () => {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Min Contribution</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Efficiency</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Energy & Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -599,10 +653,32 @@ const AdminDashboard: React.FC = () => {
                 <tr key={project.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{project.name}</div>
+                    {project.description && (
+                      <div className="text-xs text-gray-500 mt-1">{project.description}</div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{project.location}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      (project.operationalValidityYear || 2025) >= new Date().getFullYear()
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {project.operationalValidityYear || 2025}
+                      {(project.operationalValidityYear || 2025) < new Date().getFullYear() && ' (Expired)'}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{project.energyCapacity} kW</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{project.subscriptionPrice}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{project.minContribution || 999}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      project.efficiency === 'HIGH' ? 'bg-green-100 text-green-800' :
+                      project.efficiency === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {project.efficiency || 'MEDIUM'}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       project.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
@@ -741,7 +817,7 @@ const AdminDashboard: React.FC = () => {
                       <div className="text-sm font-medium text-gray-900">{payment.project.name}</div>
                       <div className="text-sm text-gray-500">{payment.project.location}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{payment.project.subscriptionPrice.toLocaleString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{(payment.contributionAmount || payment.project.subscriptionPrice || 0).toLocaleString()}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         payment.paymentStatus === 'SUCCESS' ? 'bg-green-100 text-green-800' : 
@@ -786,6 +862,89 @@ const AdminDashboard: React.FC = () => {
             </table>
           </div>
         )}
+      </div>
+    </div>
+  );
+
+  const renderCoupons = () => (
+    <div className="bg-white shadow rounded-lg">
+      <div className="px-4 py-5 sm:p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">Coupon Management</h3>
+          <button
+            onClick={() => openCouponModal()}
+            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Coupon
+          </button>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {coupons.map((coupon) => (
+                <tr key={coupon.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <span className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">{coupon.code}</span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{coupon.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      coupon.discountType === 'PERCENTAGE' 
+                        ? 'bg-blue-100 text-blue-800' 
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {coupon.discountType}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {coupon.discountType === 'PERCENTAGE' ? `${coupon.discountValue}%` : `₹${coupon.discountValue}`}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {coupon.currentUsage} / {coupon.maxUsage || '∞'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      coupon.isActive 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {coupon.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => openCouponModal(coupon)}
+                        className="text-indigo-600 hover:text-indigo-900"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => deleteCoupon(coupon.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -902,6 +1061,16 @@ const AdminDashboard: React.FC = () => {
               Payments
             </button>
             <button
+              onClick={() => setActiveTab('coupons')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'coupons'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Coupons
+            </button>
+            <button
               onClick={() => setActiveTab('config')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'config'
@@ -923,6 +1092,7 @@ const AdminDashboard: React.FC = () => {
           {activeTab === 'projects' && renderProjects()}
           {activeTab === 'kyc' && renderKyc()}
           {activeTab === 'payments' && renderPayments()}
+          {activeTab === 'coupons' && renderCoupons()}
           {activeTab === 'config' && renderConfig()}
         </div>
 
@@ -962,13 +1132,46 @@ const AdminDashboard: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Subscription Price (₹)</label>
+                    <label className="block text-sm font-medium text-gray-700">Operational Validity Year</label>
+                    <input
+                      type="number"
+                      min="2024"
+                      max="2050"
+                      value={editingProject.operationalValidityYear || 2025}
+                      onChange={(e) => setEditingProject({ ...editingProject, operationalValidityYear: parseInt(e.target.value) || 2025 })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Enter operational validity year"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Minimum Contribution (₹)</label>
                     <input
                       type="number"
                       step="0.01"
-                      value={editingProject.subscriptionPrice}
-                      onChange={(e) => setEditingProject({ ...editingProject, subscriptionPrice: parseFloat(e.target.value) })}
+                      value={editingProject.minContribution || 999}
+                      onChange={(e) => setEditingProject({ ...editingProject, minContribution: parseFloat(e.target.value) || 999 })}
                       className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Efficiency Rating</label>
+                    <select
+                      value={editingProject.efficiency || 'MEDIUM'}
+                      onChange={(e) => setEditingProject({ ...editingProject, efficiency: e.target.value as any })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="HIGH">High (14% annual)</option>
+                      <option value="MEDIUM">Medium (12% annual)</option>
+                      <option value="LOW">Low (11% annual)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea
+                      value={editingProject.description || ''}
+                      onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      rows={3}
                     />
                   </div>
                   <div>
@@ -1028,6 +1231,155 @@ const AdminDashboard: React.FC = () => {
           />
         )}
 
+        {/* Coupon Modal */}
+        {showCouponModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+              <div className="mt-3">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  {editingCoupon ? 'Edit Coupon' : 'Create New Coupon'}
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Coupon Code *</label>
+                    <input
+                      type="text"
+                      value={newCoupon.code}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="e.g., WELCOME10"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Name *</label>
+                    <input
+                      type="text"
+                      value={newCoupon.name}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, name: e.target.value })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="e.g., Welcome Discount"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea
+                      value={newCoupon.description}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, description: e.target.value })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Coupon description"
+                      rows={3}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Discount Type *</label>
+                    <select
+                      value={newCoupon.discountType}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, discountType: e.target.value as 'PERCENTAGE' | 'FIXED' })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="PERCENTAGE">Percentage</option>
+                      <option value="FIXED">Fixed Amount</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Discount Value * ({newCoupon.discountType === 'PERCENTAGE' ? '%' : '₹'})
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={newCoupon.discountValue}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, discountValue: parseFloat(e.target.value) || 0 })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      placeholder={newCoupon.discountType === 'PERCENTAGE' ? 'e.g., 10' : 'e.g., 500'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Minimum Amount (₹)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={newCoupon.minAmount || 0}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, minAmount: parseFloat(e.target.value) || 0 })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Minimum order amount"
+                    />
+                  </div>
+                  {newCoupon.discountType === 'PERCENTAGE' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Maximum Discount (₹)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={newCoupon.maxDiscount || 0}
+                        onChange={(e) => setNewCoupon({ ...newCoupon, maxDiscount: parseFloat(e.target.value) || 0 })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="Maximum discount amount"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Maximum Usage</label>
+                    <input
+                      type="number"
+                      value={newCoupon.maxUsage || 0}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, maxUsage: parseInt(e.target.value) || 0 })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="0 for unlimited"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Valid From</label>
+                    <input
+                      type="datetime-local"
+                      value={newCoupon.validFrom || ''}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, validFrom: e.target.value })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Valid Until</label>
+                    <input
+                      type="datetime-local"
+                      value={newCoupon.validUntil || ''}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, validUntil: e.target.value })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={newCoupon.isActive}
+                        onChange={(e) => setNewCoupon({ ...newCoupon, isActive: e.target.checked })}
+                        className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Active</span>
+                    </label>
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    onClick={() => {
+                      setShowCouponModal(false);
+                      setEditingCoupon(null);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveCoupon}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+                  >
+                    {editingCoupon ? 'Update Coupon' : 'Create Coupon'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Create Project Modal */}
         {showCreateModal && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -1067,14 +1419,48 @@ const AdminDashboard: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Subscription Price (₹)</label>
+                    <label className="block text-sm font-medium text-gray-700">Operational Validity Year</label>
+                    <input
+                      type="number"
+                      min="2024"
+                      max="2050"
+                      value={newProject.operationalValidityYear}
+                      onChange={(e) => setNewProject({ ...newProject, operationalValidityYear: parseInt(e.target.value) || 2025 })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Enter operational validity year"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Minimum Contribution (₹)</label>
                     <input
                       type="number"
                       step="0.01"
-                      value={newProject.subscriptionPrice}
-                      onChange={(e) => setNewProject({ ...newProject, subscriptionPrice: parseFloat(e.target.value) || 0 })}
+                      value={newProject.minContribution}
+                      onChange={(e) => setNewProject({ ...newProject, minContribution: parseFloat(e.target.value) || 999 })}
                       className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="Enter price"
+                      placeholder="Enter minimum contribution"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Efficiency Rating</label>
+                    <select
+                      value={newProject.efficiency}
+                      onChange={(e) => setNewProject({ ...newProject, efficiency: e.target.value as any })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="HIGH">High (14% annual)</option>
+                      <option value="MEDIUM">Medium (12% annual)</option>
+                      <option value="LOW">Low (11% annual)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea
+                      value={newProject.description}
+                      onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Enter project description"
+                      rows={3}
                     />
                   </div>
                   <div>
@@ -1098,6 +1484,10 @@ const AdminDashboard: React.FC = () => {
                         location: '',
                         energyCapacity: 0,
                         subscriptionPrice: 0,
+                        minContribution: 999,
+                        efficiency: 'MEDIUM',
+                        operationalValidityYear: 2025,
+                        description: '',
                         status: 'ACTIVE'
                       });
                     }}

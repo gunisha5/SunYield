@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo Solar Capital Backend Restart Script
+echo SunYield Backend Restart Script
 echo ========================================
 
 echo.

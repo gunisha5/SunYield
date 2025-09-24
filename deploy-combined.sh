@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# 🚀 Combined Deployment Script for Solar Capital (Backend + Frontend on Single EC2)
-echo "🚀 Starting Solar Capital Combined Deployment..."
+# 🚀 Combined Deployment Script for SunYield (Backend + Frontend on Single EC2)
+echo "🚀 Starting SunYield Combined Deployment..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -46,21 +46,21 @@ sudo yum install -y nginx
 
 # Create application directories
 print_status "📁 Creating application directories..."
-sudo mkdir -p /opt/solarcapital/backend
-sudo mkdir -p /opt/solarcapital/frontend
-sudo mkdir -p /var/log/solarcapital
-sudo chown -R ec2-user:ec2-user /opt/solarcapital
-sudo chown ec2-user:ec2-user /var/log/solarcapital
+sudo mkdir -p /opt/sunyield/backend
+sudo mkdir -p /opt/sunyield/frontend
+sudo mkdir -p /var/log/sunyield
+sudo chown -R ec2-user:ec2-user /opt/sunyield
+sudo chown ec2-user:ec2-user /var/log/sunyield
 
 # Copy application files
 print_status "📋 Copying application files..."
-cp -r backend/* /opt/solarcapital/backend/
-cp -r frontend/* /opt/solarcapital/frontend/
+cp -r backend/* /opt/sunyield/backend/
+cp -r frontend/* /opt/sunyield/frontend/
 
 # ===== BACKEND DEPLOYMENT =====
 print_status "🔧 Deploying Backend..."
 
-cd /opt/solarcapital/backend
+cd /opt/sunyield/backend
 
 # Build the application
 print_status "🔨 Building backend application..."
@@ -68,15 +68,15 @@ mvn clean package -DskipTests
 
 # Create systemd service for backend
 print_status "⚙️ Creating backend systemd service..."
-sudo tee /etc/systemd/system/solarcapital-backend.service > /dev/null <<EOF
+sudo tee /etc/systemd/system/sunyield-backend.service > /dev/null <<EOF
 [Unit]
-Description=Solar Capital Backend
+Description=SunYield Backend
 After=network.target
 
 [Service]
 Type=simple
 User=ec2-user
-WorkingDirectory=/opt/solarcapital/backend
+WorkingDirectory=/opt/sunyield/backend
 ExecStart=/usr/bin/java -jar target/backend-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod
 Restart=always
 RestartSec=10
@@ -89,7 +89,7 @@ EOF
 # ===== FRONTEND DEPLOYMENT =====
 print_status "🎨 Deploying Frontend..."
 
-cd /opt/solarcapital/frontend
+cd /opt/sunyield/frontend
 
 # Install dependencies
 print_status "📦 Installing frontend dependencies..."
@@ -107,7 +107,7 @@ sudo cp -r build/* /usr/share/nginx/html/
 print_status "⚙️ Configuring nginx..."
 
 # Configure nginx for both frontend and backend
-sudo tee /etc/nginx/conf.d/solarcapital.conf > /dev/null <<EOF
+sudo tee /etc/nginx/conf.d/sunyield.conf > /dev/null <<EOF
 server {
     listen 80;
     server_name _;
@@ -178,8 +178,8 @@ print_status "🔄 Starting services..."
 
 # Start backend service
 sudo systemctl daemon-reload
-sudo systemctl enable solarcapital-backend
-sudo systemctl start solarcapital-backend
+sudo systemctl enable sunyield-backend
+sudo systemctl start sunyield-backend
 
 # Start nginx
 sudo systemctl enable nginx
@@ -192,7 +192,7 @@ sleep 10
 # Check service status
 print_status "📊 Service Status:"
 echo "Backend Status:"
-sudo systemctl status solarcapital-backend --no-pager -l
+sudo systemctl status sunyield-backend --no-pager -l
 echo ""
 echo "Nginx Status:"
 sudo systemctl status nginx --no-pager -l
@@ -207,7 +207,7 @@ curl -s http://localhost | head -n 5 || echo "Frontend not responding"
 
 print_status "✅ Combined deployment completed!"
 print_warning "Next steps:"
-echo "  1. Update /opt/solarcapital/backend/src/main/resources/application-prod.properties"
+echo "  1. Update /opt/sunyield/backend/src/main/resources/application-prod.properties"
 echo "  2. Configure your RDS database endpoint"
 echo "  3. Set up AWS SES for email"
 echo "  4. Configure your domain (if applicable)"

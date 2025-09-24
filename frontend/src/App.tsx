@@ -8,20 +8,23 @@ import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import OtpVerification from './pages/OtpVerification';
+import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import Subscriptions from './pages/Subscriptions';
 import Earnings from './pages/Earnings';
 import PublicProjects from './pages/PublicProjects';
 import HowItWorks from './pages/HowItWorks';
-import AboutSolarCapital from './pages/AboutSolarCapital';
+import AboutSunYield from './pages/AboutSunYield';
 import Benefits from './pages/Benefits';
 import Wallet from './pages/Wallet';
 import Profile from './pages/Profile';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminCoupons from './pages/AdminCoupons';
 import MockPayment from './pages/MockPayment';
 import Engagement from './pages/Engagement';
+import SolarCalculator from './pages/SolarCalculator';
 import './index.css';
 
 function App() {
@@ -35,14 +38,17 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/projects" element={<PublicProjects />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/about" element={<AboutSolarCapital />} />
+            <Route path="/about" element={<AboutSunYield />} />
             <Route path="/benefits" element={<Benefits />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/verify-otp" element={<OtpVerification />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/coupons" element={<AdminCoupons />} />
             <Route path="/mock-payment" element={<MockPayment />} />
+            <Route path="/solar-calculator" element={<SolarCalculator />} />
             
             {/* Protected routes - require authentication */}
             <Route path="/app" element={

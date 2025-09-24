@@ -125,9 +125,9 @@ const Profile: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="text-center">
+      <div className="text-left">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">My Profile</h1>
-        <p className="text-gray-600 max-w-2xl mx-auto">
+        <p className="text-gray-600 max-w-2xl">
           Manage your account information, KYC verification, and security settings
         </p>
       </div>

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# 🚀 Quick Deployment Script for Solar Capital on AWS
-echo "🚀 Solar Capital AWS Deployment - Quick Start"
+# 🚀 Quick Deployment Script for SunYield on AWS
+echo "🚀 SunYield AWS Deployment - Quick Start"
 echo "=============================================="
 
 # Colors for output

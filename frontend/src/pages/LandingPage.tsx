@@ -4,6 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { projectsAPI } from '../services/api';
 import { Project } from '../types';
 import RegistrationPopup from '../components/RegistrationPopup';
+import SubscriptionPopup from '../components/SubscriptionPopup';
+import ProfileDropdown from '../components/ProfileDropdown';
+import SharedNavigation from '../components/SharedNavigation';
+import SolarCalculator from './SolarCalculator';
 import { 
   Zap, 
   DollarSign, 
@@ -17,7 +21,8 @@ import {
   Shield,
   Globe,
   Target,
-  Calendar
+  Calendar,
+  Wallet
 } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
@@ -25,18 +30,15 @@ const LandingPage: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [showRegistrationPopup, setShowRegistrationPopup] = useState(false);
+  const [showSubscriptionPopup, setShowSubscriptionPopup] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   useEffect(() => {
-    // If user is already authenticated, redirect to dashboard
-    if (isAuthenticated) {
-      navigate('/app/dashboard');
-      return;
-    }
-
-    // Fetch projects for the showcase
+    // Fetch projects for the showcase (always fetch, regardless of auth status)
     fetchProjects();
-  }, [isAuthenticated, navigate]);
+  }, []);
+
+
 
   const fetchProjects = async () => {
     try {
@@ -49,8 +51,17 @@ const LandingPage: React.FC = () => {
 
   const handleSubscribe = (project: Project) => {
     setSelectedProject(project);
-    setShowRegistrationPopup(true);
+    
+    if (isAuthenticated) {
+      // If user is authenticated, show subscription popup
+      setShowSubscriptionPopup(true);
+    } else {
+      // If user is not authenticated, show registration popup
+      setShowRegistrationPopup(true);
+    }
   };
+
+
 
   const handleLogin = () => {
     navigate('/login');
@@ -63,74 +74,7 @@ const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation Header */}
-      <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Left side - Solar Capital Logo */}
-            <div className="flex items-center -ml-8">
-              <div className="flex-shrink-0">
-                <button 
-                  onClick={() => navigate('/')}
-                  className="flex items-center text-2xl font-bold text-green-600 hover:text-green-700 transition-colors pl-8 group"
-                >
-                  <Zap className="h-8 w-8 mr-2 group-hover:scale-110 transition-transform duration-200" />
-                  Solar Capital
-                </button>
-              </div>
-            </div>
-            
-            {/* Center - Navigation Links */}
-            <div className="flex items-center space-x-8">
-              <button
-                onClick={() => navigate('/')}
-                className="text-green-600 font-semibold border-b-2 border-green-600 pb-1 transition-colors"
-              >
-                Home
-              </button>
-              <button
-                onClick={() => navigate('/how-it-works')}
-                className="text-gray-700 hover:text-green-600 font-medium transition-colors"
-              >
-                How It Works
-              </button>
-              <button
-                onClick={() => navigate('/about')}
-                className="text-gray-700 hover:text-green-600 font-medium transition-colors"
-              >
-                About Us
-              </button>
-              <button
-                onClick={() => navigate('/benefits')}
-                className="text-gray-700 hover:text-green-600 font-medium transition-colors"
-              >
-                Benefits
-              </button>
-              <button
-                onClick={() => navigate('/projects')}
-                className="text-gray-700 hover:text-green-600 font-medium transition-colors"
-              >
-                Explore Projects
-              </button>
-            </div>
-            
-            {/* Right side - Auth Buttons */}
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={handleLogin}
-                className="text-gray-700 hover:text-green-600 font-medium transition-colors"
-              >
-                Login
-              </button>
-              <button
-                onClick={handleRegister}
-                className="btn-primary"
-              >
-                Get Started
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <SharedNavigation />
 
       {/* Hero Section */}
       <section className="hero-section">
@@ -142,46 +86,95 @@ const LandingPage: React.FC = () => {
             <div className="absolute bottom-20 left-20 w-12 h-12 bg-yellow-200 rounded-full opacity-20 floating" style={{ animationDelay: '2s' }}></div>
             
             <h1 className="hero-title mb-8">
-              Invest in Solar Energy{' '}
-              <span className="gradient-text">Without Limits</span>
+              {isAuthenticated ? (
+                <>
+                  Welcome Back to{' '}
+                  <span className="gradient-text">SunYield</span>
+                </>
+              ) : (
+                <>
+                  Invest in Solar Energy{' '}
+                  <span className="gradient-text">Without Limits</span>
+                </>
+              )}
             </h1>
             <p className="hero-subtitle mb-12">
-              Join our community of smart investors who earn attractive returns while powering India's renewable energy revolution. Start with just ₹999 and watch your money grow sustainably.
+              {isAuthenticated ? (
+                "Track your investments, monitor performance, and discover new opportunities to grow your solar portfolio."
+              ) : (
+                "Join our community of smart investors who earn attractive returns while powering India's renewable energy revolution. Start with just ₹999 and watch your money grow sustainably."
+              )}
             </p>
             
-            {/* Stats Cards */}
-            <div className="flex flex-wrap justify-center gap-8 mb-12">
-              <div className="stats-card transform hover:scale-105 transition-all duration-300">
-                <div className="stats-number">{projects.length}+</div>
-                <div className="stats-label">Active Projects</div>
+            {/* Stats Cards - Different content for authenticated vs non-authenticated users */}
+            {isAuthenticated ? (
+              <div className="flex flex-wrap justify-center gap-8 mb-12">
+                <div className="stats-card transform hover:scale-105 transition-all duration-300">
+                  <div className="stats-number">Your Portfolio</div>
+                  <div className="stats-label">Active Investments</div>
+                </div>
+                <div className="stats-card transform hover:scale-105 transition-all duration-300" style={{ animationDelay: '0.2s' }}>
+                  <div className="stats-number">Track</div>
+                  <div className="stats-label">Real-time Performance</div>
+                </div>
+                <div className="stats-card transform hover:scale-105 transition-all duration-300" style={{ animationDelay: '0.4s' }}>
+                  <div className="stats-number">Grow</div>
+                  <div className="stats-label">New Opportunities</div>
+                </div>
               </div>
-              <div className="stats-card transform hover:scale-105 transition-all duration-300" style={{ animationDelay: '0.2s' }}>
-                <div className="stats-number">12-15%</div>
-                <div className="stats-label">Expected Returns</div>
+            ) : (
+              <div className="flex flex-wrap justify-center gap-8 mb-12">
+                <div className="stats-card transform hover:scale-105 transition-all duration-300">
+                  <div className="stats-number">{projects.length}+</div>
+                  <div className="stats-label">Active Projects</div>
+                </div>
+                <div className="stats-card transform hover:scale-105 transition-all duration-300" style={{ animationDelay: '0.2s' }}>
+                  <div className="stats-number">12-15%</div>
+                  <div className="stats-label">Expected Returns</div>
+                </div>
+                <div className="stats-card transform hover:scale-105 transition-all duration-300" style={{ animationDelay: '0.4s' }}>
+                  <div className="stats-number">₹999</div>
+                  <div className="stats-label">Starting Price</div>
+                </div>
               </div>
-              <div className="stats-card transform hover:scale-105 transition-all duration-300" style={{ animationDelay: '0.4s' }}>
-                <div className="stats-number">₹999</div>
-                <div className="stats-label">Starting Price</div>
-              </div>
-            </div>
+            )}
             
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                              <button
+            {/* CTA Buttons - Different content for authenticated vs non-authenticated users */}
+            {isAuthenticated ? (
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <button
+                  onClick={() => navigate('/app/dashboard')}
+                  className="btn-primary text-lg px-10 py-5 flex items-center space-x-3 group"
+                >
+                  <span>Go to Dashboard</span>
+                  <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform duration-300" />
+                </button>
+                <button
+                  onClick={() => navigate('/app/projects')}
+                  className="btn-outline text-lg px-10 py-5 flex items-center space-x-3 group"
+                >
+                  <span>Manage Portfolio</span>
+                  <Play className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <button
                   onClick={handleRegister}
                   className="btn-primary text-lg px-10 py-5 flex items-center space-x-3 group"
                 >
                   <span>Begin Investing Today</span>
                   <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform duration-300" />
                 </button>
-              <button
-                onClick={() => navigate('/projects')}
-                className="btn-outline text-lg px-10 py-5 flex items-center space-x-3 group"
-              >
-                <span>Explore Projects</span>
-                <Play className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
-              </button>
-            </div>
+                <button
+                  onClick={() => navigate(isAuthenticated ? '/app/projects' : '/projects')}
+                  className="btn-outline text-lg px-10 py-5 flex items-center space-x-3 group"
+                >
+                  <span>Explore Projects</span>
+                  <Play className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
+                </button>
+              </div>
+            )}
             
             {/* Trust Indicators */}
             <div className="mt-16 flex flex-wrap justify-center items-center gap-8 text-sm text-gray-600">
@@ -202,6 +195,22 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Solar Calculator Section - Only for non-logged-in users */}
+      {!isAuthenticated && (
+        <section className="py-24 bg-gray-50 relative overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div className="text-center mb-20">
+              <h2 className="text-4xl font-black text-gray-900 mb-6 gradient-text">
+                Calculate Your Solar Savings
+              </h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Discover how much you can save on your electricity bills with solar energy.
+              </p>
+            </div>
+            <SolarCalculator isHomePage={true} />
+          </div>
+        </section>
+      )}
 
 
       {/* Featured Projects Section */}
@@ -212,10 +221,13 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
             <h2 className="text-4xl font-black text-gray-900 mb-6 gradient-text">
-              Premium Solar Investments
+              {isAuthenticated ? "Your Solar Portfolio" : "Premium Solar Investments"}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Discover our carefully curated portfolio of high-performing solar installations across educational institutions and commercial buildings
+              {isAuthenticated 
+                ? "Manage your existing investments and discover new opportunities to diversify your portfolio"
+                : "Discover our carefully curated portfolio of high-performing solar installations across educational institutions and commercial buildings"
+              }
             </p>
           </div>
           
@@ -271,13 +283,41 @@ const LandingPage: React.FC = () => {
                       </p>
                     </div>
                     <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-                      <p className="text-sm text-gray-600 font-medium mb-1">Price</p>
+                      <p className="text-sm text-gray-600 font-medium mb-1">Min Contribution</p>
                       <p className="text-xl font-bold text-green-600">
-                        ₹{project.subscriptionPrice.toLocaleString()}
+                        ₹{(project.minContribution || project.subscriptionPrice || 999).toLocaleString()}
                       </p>
                     </div>
                   </div>
                   
+                  {/* Solar Capital Fields */}
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="text-center p-3 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg border border-yellow-200">
+                      <p className="text-xs text-gray-600 font-medium mb-1">Efficiency</p>
+                        <p className="text-sm font-bold text-yellow-700">
+                          {project.efficiency || 'MEDIUM'}
+                        </p>
+                    </div>
+                    <div className={`text-center p-3 rounded-lg border ${
+                      (project.operationalValidityYear || 2025) >= new Date().getFullYear()
+                        ? 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200'
+                        : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200'
+                    }`}>
+                      <p className="text-xs text-gray-600 font-medium mb-1">Validity</p>
+                      <p className={`text-sm font-bold ${
+                        (project.operationalValidityYear || 2025) >= new Date().getFullYear()
+                          ? 'text-purple-700'
+                          : 'text-gray-500'
+                      }`}>
+                        {project.operationalValidityYear || 2025}
+                        {(project.operationalValidityYear || 2025) < new Date().getFullYear() && (
+                          <span className="block text-xs text-red-500">Expired</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  
+
                   {/* Project Stats */}
                   <div className="flex justify-between items-center mb-6 text-sm text-gray-600">
                     <div className="flex items-center space-x-1">
@@ -286,7 +326,7 @@ const LandingPage: React.FC = () => {
                     </div>
                     <div className="flex items-center space-x-1">
                       <TrendingUp className="h-4 w-4" />
-                      <span>12-15% returns</span>
+                      <span>₹5 per kWh</span>
                     </div>
                   </div>
 
@@ -294,7 +334,7 @@ const LandingPage: React.FC = () => {
                     onClick={() => handleSubscribe(project)}
                     className="w-full btn-primary flex items-center justify-center space-x-2 group"
                   >
-                    <span>Subscribe Now</span>
+                    <span>{isAuthenticated ? "Add to Portfolio" : "Subscribe Now"}</span>
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
                   </button>
                 </div>
@@ -304,10 +344,10 @@ const LandingPage: React.FC = () => {
           
           <div className="text-center mt-12">
             <button
-              onClick={() => navigate('/projects')}
+              onClick={() => navigate(isAuthenticated ? '/app/projects' : '/projects')}
               className="btn-outline"
             >
-              View All Projects
+              {isAuthenticated ? "Manage Portfolio" : "View All Projects"}
             </button>
           </div>
         </div>
@@ -364,53 +404,55 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-24 bg-gradient-to-br from-green-600 via-green-700 to-green-800 relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Cdefs%3E%3Cpattern id=%22stars%22 width=%2220%22 height=%2220%22 patternUnits=%22userSpaceOnUse%22%3E%3Ccircle cx=%2210%22 cy=%2210%22 r=%220.5%22 fill=%22white%22 opacity=%220.1%22/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=%22100%22 height=%22100%22 fill=%22url(%23stars)%22/%3E%3C/svg%3E')] opacity-30"></div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-5xl font-black text-white mb-6">
-            Ready to Grow Your{' '}
-            <span className="text-yellow-300">Wealth?</span>
-          </h2>
-          <p className="text-xl text-green-100 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Join thousands of savvy investors who are already earning impressive returns while supporting India's clean energy transformation
-          </p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-            <button
-              onClick={handleRegister}
-              className="bg-white text-green-600 hover:bg-gray-100 font-bold py-4 px-10 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center space-x-3 group"
-            >
-              <span>Start Investing Now</span>
-              <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
-            </button>
-            <button
-              onClick={() => navigate('/projects')}
-              className="border-2 border-white text-white hover:bg-white hover:text-green-600 font-bold py-4 px-10 rounded-xl transition-all duration-300 transform hover:scale-105 flex items-center space-x-3 group"
-            >
-              <span>Explore Projects</span>
-              <Play className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
-            </button>
-          </div>
+      {/* CTA Section - Only show for non-authenticated users */}
+      {!isAuthenticated && (
+        <section className="py-24 bg-gradient-to-br from-green-600 via-green-700 to-green-800 relative overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Cdefs%3E%3Cpattern id=%22stars%22 width=%2220%22 height=%2220%22 patternUnits=%22userSpaceOnUse%22%3E%3Ccircle cx=%2210%22 cy=%2210%22 r=%220.5%22 fill=%22white%22 opacity=%220.1%22/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=%22100%22 height=%22100%22 fill=%22url(%23stars)%22/%3E%3C/svg%3E')] opacity-30"></div>
           
-          {/* Trust Indicators */}
-          <div className="mt-16 flex flex-wrap justify-center items-center gap-8 text-sm text-green-200">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5" />
-              <span>No Hidden Fees</span>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+            <h2 className="text-5xl font-black text-white mb-6">
+              Ready to Grow Your{' '}
+              <span className="text-yellow-300">Wealth?</span>
+            </h2>
+            <p className="text-xl text-green-100 mb-12 max-w-3xl mx-auto leading-relaxed">
+              Join thousands of savvy investors who are already earning impressive returns while supporting India's clean energy transformation
+            </p>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <button
+                onClick={handleRegister}
+                className="bg-white text-green-600 hover:bg-gray-100 font-bold py-4 px-10 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center space-x-3 group"
+              >
+                <span>Start Investing Now</span>
+                <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
+              </button>
+              <button
+                onClick={() => navigate(isAuthenticated ? '/app/projects' : '/projects')}
+                className="border-2 border-white text-white hover:bg-white hover:text-green-600 font-bold py-4 px-10 rounded-xl transition-all duration-300 transform hover:scale-105 flex items-center space-x-3 group"
+              >
+                <span>Explore Projects</span>
+                <Play className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
+              </button>
             </div>
-            <div className="flex items-center space-x-2">
-              <Shield className="h-5 w-5" />
-              <span>Secure Investment</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5" />
-              <span>Guaranteed Returns</span>
+            
+            {/* Trust Indicators */}
+            <div className="mt-16 flex flex-wrap justify-center items-center gap-8 text-sm text-green-200">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-5 w-5" />
+                <span>No Hidden Fees</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Shield className="h-5 w-5" />
+                <span>Secure Investment</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="h-5 w-5" />
+                <span>Guaranteed Returns</span>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
@@ -419,46 +461,77 @@ const LandingPage: React.FC = () => {
             <div>
               <div className="flex items-center mb-4">
                 <Zap className="h-8 w-8 text-green-400 mr-2" />
-                <span className="text-xl font-bold">Solar Capital</span>
+                <span className="text-xl font-bold">SunYield</span>
               </div>
               <p className="text-gray-400">
                 Revolutionizing solar investment opportunities for everyone. We're building India's largest community of renewable energy investors, making sustainable wealth creation accessible to all.
               </p>
             </div>
             
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><button onClick={() => navigate('/projects')} className="hover:text-white transition-colors">Projects</button></li>
-                <li><button onClick={() => navigate('/how-it-works')} className="hover:text-white transition-colors">How It Works</button></li>
-                <li><button onClick={() => navigate('/about')} className="hover:text-white transition-colors">About Us</button></li>
-                <li><button onClick={() => navigate('/benefits')} className="hover:text-white transition-colors">Benefits</button></li>
-
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Get Started</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><button onClick={handleLogin} className="hover:text-white transition-colors">Login</button></li>
-                <li><button onClick={handleRegister} className="hover:text-white transition-colors">Register</button></li>
-              </ul>
-            </div>
-            
-
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Legal</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li>Terms of Service</li>
-                <li>Privacy Policy</li>
-                <li>Exit Policy</li>
-              </ul>
-            </div>
+            {isAuthenticated ? (
+              <>
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
+                  <ul className="space-y-2 text-gray-400">
+                    <li><button onClick={() => navigate('/app/projects')} className="hover:text-white transition-colors">Projects</button></li>
+                    <li><button onClick={() => navigate('/app/dashboard')} className="hover:text-white transition-colors">Dashboard</button></li>
+                    <li><button onClick={() => navigate('/app/earnings')} className="hover:text-white transition-colors">Earnings</button></li>
+                    <li><button onClick={() => navigate('/app/wallet')} className="hover:text-white transition-colors">Wallet</button></li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Account</h3>
+                  <ul className="space-y-2 text-gray-400">
+                    <li><button onClick={() => navigate('/app/profile')} className="hover:text-white transition-colors">Profile</button></li>
+                    <li><button onClick={() => navigate('/app/subscriptions')} className="hover:text-white transition-colors">Subscriptions</button></li>
+                    <li><button onClick={() => navigate('/app/engagement')} className="hover:text-white transition-colors">Engagement</button></li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Support</h3>
+                  <ul className="space-y-2 text-gray-400">
+                    <li>Help Center</li>
+                    <li>Contact Support</li>
+                    <li>FAQ</li>
+                  </ul>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
+                  <ul className="space-y-2 text-gray-400">
+                    <li><button onClick={() => navigate(isAuthenticated ? '/app/projects' : '/projects')} className="hover:text-white transition-colors">Projects</button></li>
+                    <li><button onClick={() => navigate('/how-it-works')} className="hover:text-white transition-colors">How It Works</button></li>
+                    <li><button onClick={() => navigate('/about')} className="hover:text-white transition-colors">About Us</button></li>
+                    <li><button onClick={() => navigate('/benefits')} className="hover:text-white transition-colors">Benefits</button></li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Get Started</h3>
+                  <ul className="space-y-2 text-gray-400">
+                    <li><button onClick={handleLogin} className="hover:text-white transition-colors font-semibold">Login</button></li>
+                    <li><button onClick={handleRegister} className="hover:text-white transition-colors">Register</button></li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Legal</h3>
+                  <ul className="space-y-2 text-gray-400">
+                    <li>Terms of Service</li>
+                    <li>Privacy Policy</li>
+                    <li>Exit Policy</li>
+                  </ul>
+                </div>
+              </>
+            )}
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 Solar Capital. All rights reserved.</p>
+            <p>&copy; 2025 SunYield. All rights reserved.</p>
           </div>
         </div>
       </footer>
@@ -469,6 +542,17 @@ const LandingPage: React.FC = () => {
         onClose={() => setShowRegistrationPopup(false)}
         projectName={selectedProject?.name}
       />
+
+      {/* Subscription Popup */}
+      {showSubscriptionPopup && selectedProject && (
+        <SubscriptionPopup
+          project={selectedProject}
+          onClose={() => {
+            console.log('Closing subscription popup');
+            setShowSubscriptionPopup(false);
+          }}
+        />
+      )}
     </div>
   );
 };

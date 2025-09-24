@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { projectsAPI, subscriptionsAPI } from '../services/api';
 import { Project } from '../types';
-import { MapPin, Zap, DollarSign, Calendar, ArrowRight, TrendingUp } from 'lucide-react';
+import { MapPin, Zap, DollarSign, Calendar, ArrowRight, TrendingUp, Leaf, Building, Heart, Factory } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import RegistrationPopup from '../components/RegistrationPopup';
+import SubscriptionPopup from '../components/SubscriptionPopup';
 
 const Projects: React.FC = () => {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ const Projects: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState<number | null>(null);
   const [showRegistrationPopup, setShowRegistrationPopup] = useState(false);
+  const [showSubscriptionPopup, setShowSubscriptionPopup] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   useEffect(() => {
@@ -47,21 +49,9 @@ const Projects: React.FC = () => {
       return;
     }
 
-    try {
-      setSubscribing(project.id);
-      const response = await subscriptionsAPI.subscribeToProject(project.id);
-      
-      // Show success message and refresh projects
-      toast.success(`Successfully subscribed to ${response.data.projectName}!`);
-      fetchProjects(); // Refresh the projects list
-      
-    } catch (error: any) {
-      console.error('Error subscribing to project:', error);
-      const errorMessage = error.response?.data || 'Failed to subscribe to project';
-      toast.error(errorMessage);
-    } finally {
-      setSubscribing(null);
-    }
+    // If authenticated, show subscription popup
+    setSelectedProject(project);
+    setShowSubscriptionPopup(true);
   };
 
   if (loading) {
@@ -81,11 +71,12 @@ const Projects: React.FC = () => {
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
-            <h2 className="text-4xl font-black text-gray-900 mb-6 gradient-text">
-              Premium Solar Investments
+            <h2 className="text-4xl font-black text-gray-900 mb-6 gradient-text flex items-center justify-center">
+              <Leaf className="h-10 w-10 text-green-600 mr-4" />
+              SunYield Projects
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Choose from our carefully curated portfolio of high-performing solar installations and start earning rewards
+              Contribute to our carefully curated portfolio of solar installations and earn Green Credits based on actual energy generation
             </p>
           </div>
           
@@ -142,13 +133,41 @@ const Projects: React.FC = () => {
                       </p>
                     </div>
                     <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-                      <p className="text-sm text-gray-600 font-medium mb-1">Price</p>
+                      <p className="text-sm text-gray-600 font-medium mb-1">Min Contribution</p>
                       <p className="text-xl font-bold text-green-600">
-                        ₹{project.subscriptionPrice.toLocaleString()}
+                        ₹{(project.minContribution || project.subscriptionPrice || 999).toLocaleString()}
                       </p>
                     </div>
                   </div>
                   
+                  {/* Solar Capital Fields */}
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="text-center p-3 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg border border-yellow-200">
+                      <p className="text-xs text-gray-600 font-medium mb-1">Efficiency</p>
+                      <p className="text-sm font-bold text-yellow-700">
+                        {project.efficiency || 'MEDIUM'}
+                      </p>
+                    </div>
+                    <div className={`text-center p-3 rounded-lg border ${
+                      (project.operationalValidityYear || 2025) >= new Date().getFullYear()
+                        ? 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200'
+                        : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200'
+                    }`}>
+                      <p className="text-xs text-gray-600 font-medium mb-1">Validity</p>
+                      <p className={`text-sm font-bold ${
+                        (project.operationalValidityYear || 2025) >= new Date().getFullYear()
+                          ? 'text-purple-700'
+                          : 'text-gray-500'
+                      }`}>
+                        {project.operationalValidityYear || 2025}
+                        {(project.operationalValidityYear || 2025) < new Date().getFullYear() && (
+                          <span className="block text-xs text-red-500">Expired</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  
+
                   {/* Project Stats */}
                   <div className="flex justify-between items-center mb-6 text-sm text-gray-600">
                     <div className="flex items-center space-x-1">
@@ -157,7 +176,7 @@ const Projects: React.FC = () => {
                     </div>
                     <div className="flex items-center space-x-1">
                       <TrendingUp className="h-4 w-4" />
-                      <span>12-15% returns</span>
+                      <span>₹5 per kWh</span>
                     </div>
                   </div>
 
@@ -171,7 +190,7 @@ const Projects: React.FC = () => {
                       <div className="loading-spinner mx-auto"></div>
                     ) : (
                       <>
-                        <span>Subscribe Now</span>
+                        <span>Contribute Now</span>
                         <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
                       </>
                     )}
@@ -200,6 +219,14 @@ const Projects: React.FC = () => {
         onClose={() => setShowRegistrationPopup(false)}
         projectName={selectedProject?.name}
       />
+
+      {/* Subscription Popup */}
+      {showSubscriptionPopup && selectedProject && (
+        <SubscriptionPopup
+          project={selectedProject}
+          onClose={() => setShowSubscriptionPopup(false)}
+        />
+      )}
     </div>
   );
 };

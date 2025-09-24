@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 🚀 Simplified Deployment Script with Configuration File
-echo "🚀 Solar Capital Deployment with Configuration"
+echo "🚀 SunYield Deployment with Configuration"
 echo "=============================================="
 
 # Colors for output
@@ -61,7 +61,7 @@ print_step "Updating Configuration Files"
 print_status "Updating backend database configuration..."
 cp backend/src/main/resources/application-prod.properties backend/src/main/resources/application-prod.properties.backup
 
-sed -i "s|jdbc:mysql://localhost:3306/solarcapital|jdbc:mysql://$RDS_ENDPOINT:3306/solarcapital|g" backend/src/main/resources/application-prod.properties
+sed -i "s|jdbc:mysql://localhost:3306/sunyield|jdbc:mysql://$RDS_ENDPOINT:3306/sunyield|g" backend/src/main/resources/application-prod.properties
 sed -i "s|spring.datasource.username=root|spring.datasource.username=$RDS_USERNAME|g" backend/src/main/resources/application-prod.properties
 sed -i "s|spring.datasource.password=password|spring.datasource.password=$RDS_PASSWORD|g" backend/src/main/resources/application-prod.properties
 
@@ -140,24 +140,24 @@ print_step "Deploying to EC2"
 cat > ec2-deploy.sh << 'EOF'
 #!/bin/bash
 
-echo "🚀 Deploying Solar Capital to EC2..."
+echo "🚀 Deploying SunYield to EC2..."
 
 # Stop services
-sudo systemctl stop solarcapital-backend 2>/dev/null || true
+sudo systemctl stop sunyield-backend 2>/dev/null || true
 sudo systemctl stop nginx 2>/dev/null || true
 
 # Backup
-sudo cp -r /opt/solarcapital /opt/solarcapital-backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
-sudo cp -r /var/www/solarcapital /var/www/solarcapital-backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+sudo cp -r /opt/sunyield /opt/sunyield-backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+sudo cp -r /var/www/sunyield /var/www/sunyield-backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
 
 # Clean up
-sudo rm -rf /opt/solarcapital
-sudo rm -rf /var/www/solarcapital
+sudo rm -rf /opt/sunyield
+sudo rm -rf /var/www/sunyield
 
 # Clone and deploy
 cd /home/ec2-user
-git clone https://github.com/REPLACE_GITHUB_USERNAME/REPLACE_GITHUB_REPO_NAME.git solarcapital-backend
-cd solarcapital-backend
+git clone https://github.com/REPLACE_GITHUB_USERNAME/REPLACE_GITHUB_REPO_NAME.git sunyield-backend
+cd sunyield-backend
 
 # Deploy backend
 if [ -f "deploy-backend.sh" ]; then

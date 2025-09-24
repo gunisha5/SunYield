@@ -1,4 +1,4 @@
-# SolarCapital Backend API Documentation
+# sunyield Backend API Documentation
 
 ---
 

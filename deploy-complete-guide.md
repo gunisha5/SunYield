@@ -1,4 +1,4 @@
-# Complete AWS Deployment Guide for Solar Capital
+# Complete AWS Deployment Guide for SunYield
 
 ## Prerequisites
 - AWS Account
@@ -14,18 +14,18 @@
 
 2. **Launch Instance**
    - Click "Launch Instance"
-   - Name: `solar-capital-server`
+   - Name: `sunyield-server`
    - AMI: Amazon Linux 2023 AMI (64-bit x86)
    - Instance type: `t2.micro` (free tier) or `t3.small` (recommended)
 
 3. **Create Key Pair**
-   - Key pair name: `solar-capital-key`
+   - Key pair name: `sunyield-key`
    - Key pair type: RSA
    - Private key format: `.ppk` (for PuTTY)
    - **Download and save the `.ppk` file safely**
 
 4. **Configure Security Group**
-   - Create new security group: `solar-capital-sg`
+   - Create new security group: `sunyield-sg`
    - Add these inbound rules:
      ```
      Type          Port    Source      Description
@@ -51,7 +51,7 @@
 
 3. **Save Session**
    - Go back to Session
-   - Saved Sessions: "Solar Capital"
+   - Saved Sessions: "SunYield"
    - Click "Save"
    - Click "Open"
 
@@ -83,8 +83,8 @@ cd your-repo
 ### Option C: Manual Upload (if small files)
 1. **Create files on server**:
 ```bash
-mkdir -p ~/solar-capital-project
-cd ~/solar-capital-project
+mkdir -p ~/sunyield-project
+cd ~/sunyield-project
 ```
 
 2. **Copy-paste your code** into files using nano editor:
@@ -96,7 +96,7 @@ nano filename.java  # Paste your code and save with Ctrl+X, Y, Enter
 
 ### Step 1: Make Script Executable
 ```bash
-cd ~/solar-capital-project  # or wherever your code is
+cd ~/sunyield-project  # or wherever your code is
 chmod +x deploy-backend-improved.sh
 ```
 
@@ -115,13 +115,13 @@ chmod +x deploy-backend-improved.sh
 ### Step 3: Verify Backend
 ```bash
 # Check if backend is running
-sudo systemctl status solarcapital-backend
+sudo systemctl status sunyield-backend
 
 # Check backend health
 curl http://localhost:8080/actuator/health
 
 # View logs if there are issues
-sudo journalctl -u solarcapital-backend -f
+sudo journalctl -u sunyield-backend -f
 ```
 
 ## Phase 4: Deploy Frontend
@@ -174,7 +174,7 @@ If your application needs initial data:
 mysql -u root -ppassword
 
 # Use your database
-USE solarcapital;
+USE sunyield;
 
 # Run any initialization SQL files
 source /path/to/your/init.sql;
@@ -185,10 +185,10 @@ source /path/to/your/init.sql;
 ### Backend Issues
 ```bash
 # Check backend logs
-sudo journalctl -u solarcapital-backend -n 50
+sudo journalctl -u sunyield-backend -n 50
 
 # Restart backend
-sudo systemctl restart solarcapital-backend
+sudo systemctl restart sunyield-backend
 
 # Check database connection
 mysql -u root -ppassword -e "SHOW DATABASES;"
@@ -235,7 +235,7 @@ sudo iptables -L
 ### Start/Stop Services
 ```bash
 # Backend
-sudo systemctl start/stop/restart solarcapital-backend
+sudo systemctl start/stop/restart sunyield-backend
 
 # Frontend (nginx)
 sudo systemctl start/stop/restart nginx
@@ -247,7 +247,7 @@ sudo systemctl start/stop/restart mysqld
 ### View Logs
 ```bash
 # Backend logs
-sudo journalctl -u solarcapital-backend -f
+sudo journalctl -u sunyield-backend -f
 
 # Nginx logs
 sudo journalctl -u nginx -f
@@ -259,13 +259,13 @@ sudo journalctl -f
 ### Update Application
 ```bash
 # Pull latest code (if using git)
-cd ~/solar-capital-project
+cd ~/sunyield-project
 git pull
 
 # Rebuild and restart backend
 cd backend
 mvn clean package -DskipTests
-sudo systemctl restart solarcapital-backend
+sudo systemctl restart sunyield-backend
 
 # Rebuild and restart frontend
 cd ../frontend
@@ -278,7 +278,7 @@ sudo systemctl restart nginx
 
 ✅ **Backend is working** if:
 - `curl http://YOUR_IP:8080/actuator/health` returns `{"status":"UP"}`
-- `sudo systemctl status solarcapital-backend` shows "active (running)"
+- `sudo systemctl status sunyield-backend` shows "active (running)"
 
 ✅ **Frontend is working** if:
 - Visiting `http://YOUR_IP` shows your React application
@@ -301,4 +301,4 @@ If you encounter issues:
 
 ---
 
-**Congratulations!** 🎉 Your Solar Capital application should now be running on AWS! 
+**Congratulations!** 🎉 Your SunYield application should now be running on AWS! 

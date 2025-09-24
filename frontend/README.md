@@ -1,6 +1,6 @@
-# Solar Capital Frontend
+# SunYield Frontend
 
-A modern React frontend for the Solar Capital investment platform, built with TypeScript, Tailwind CSS, and React Router.
+A modern React frontend for the SunYield investment platform, built with TypeScript, Tailwind CSS, and React Router.
 
 ## Features
 
@@ -76,7 +76,7 @@ npm run build
 
 ## API Integration
 
-The frontend integrates with the Solar Capital backend API. Make sure your backend is running on `http://localhost:8080` or update the API base URL in `src/services/api.ts`.
+The frontend integrates with the SunYield backend API. Make sure your backend is running on `http://localhost:8080` or update the API base URL in `src/services/api.ts`.
 
 ### Available Endpoints
 

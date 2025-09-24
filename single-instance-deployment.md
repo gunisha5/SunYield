@@ -8,7 +8,7 @@
 - Instance Type: t3.medium (2 vCPU, 4 GB RAM)
 - AMI: Amazon Linux 2
 - Storage: 30 GB GP3
-- Security Group: SolarCapital-SG
+- Security Group: sunyield-SG
 - Key Pair: Your SSH key
 ```
 
@@ -27,7 +27,7 @@ Inbound Rules:
 - Instance: db.t3.micro
 - Storage: 20 GB
 - Security Group: RDS-SG (allow MySQL from EC2-SG)
-- Database Name: solarcapital
+- Database Name: sunyield
 ```
 
 ### **Step 4: Deploy Application**
@@ -48,10 +48,10 @@ chmod +x deploy-combined.sh
 ### **Step 5: Configure Application**
 ```bash
 # Edit production configuration
-sudo nano /opt/solarcapital/backend/src/main/resources/application-prod.properties
+sudo nano /opt/sunyield/backend/src/main/resources/application-prod.properties
 
 # Update with your values:
-spring.datasource.url=jdbc:mysql://your-rds-endpoint:3306/solarcapital
+spring.datasource.url=jdbc:mysql://your-rds-endpoint:3306/sunyield
 spring.datasource.username=your_username
 spring.datasource.password=your_password
 ```
@@ -59,13 +59,13 @@ spring.datasource.password=your_password
 ### **Step 6: Restart Services**
 ```bash
 # Restart backend
-sudo systemctl restart solarcapital-backend
+sudo systemctl restart sunyield-backend
 
 # Restart nginx
 sudo systemctl restart nginx
 
 # Check status
-sudo systemctl status solarcapital-backend
+sudo systemctl status sunyield-backend
 sudo systemctl status nginx
 ```
 
@@ -108,20 +108,20 @@ sudo systemctl status nginx
 ### **Check Application Status**
 ```bash
 # Backend status
-sudo systemctl status solarcapital-backend
+sudo systemctl status sunyield-backend
 
 # Nginx status
 sudo systemctl status nginx
 
 # View logs
-sudo journalctl -u solarcapital-backend -f
+sudo journalctl -u sunyield-backend -f
 sudo tail -f /var/log/nginx/access.log
 ```
 
 ### **Restart Services**
 ```bash
 # Restart backend
-sudo systemctl restart solarcapital-backend
+sudo systemctl restart sunyield-backend
 
 # Restart nginx
 sudo systemctl restart nginx
@@ -130,15 +130,15 @@ sudo systemctl restart nginx
 ### **Update Application**
 ```bash
 # Stop services
-sudo systemctl stop solarcapital-backend
+sudo systemctl stop sunyield-backend
 
 # Update code
-cd /opt/solarcapital/backend
+cd /opt/sunyield/backend
 git pull  # or copy new files
 
 # Rebuild and restart
 mvn clean package -DskipTests
-sudo systemctl start solarcapital-backend
+sudo systemctl start sunyield-backend
 ```
 
 ## 🌐 **Access Points**
@@ -185,7 +185,7 @@ top
 
 1. **Backend not starting:**
    ```bash
-   sudo journalctl -u solarcapital-backend -f
+   sudo journalctl -u sunyield-backend -f
    ```
 
 2. **Nginx not serving frontend:**
@@ -221,4 +221,4 @@ top
 
 ---
 
-**🎉 Your Solar Capital application is now running on a single EC2 instance!** 
+**🎉 Your SunYield application is now running on a single EC2 instance!** 

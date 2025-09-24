@@ -18,6 +18,7 @@ import {
   DashboardStats,
   CreditTransferLog,
   KYC,
+  Coupon,
 } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
@@ -90,8 +91,38 @@ export const authAPI = {
   resendOtp: (data: { email: string }) =>
     api.post<{ message: string }>('/api/auth/resend-otp', data),
   
+  forgotPassword: (email: string) =>
+    api.post<{ message: string }>('/api/auth/forgot-password', { email }),
+  
+  verifyForgotPasswordOtp: (email: string, otp: string) =>
+    api.post<{ message: string }>('/api/auth/verify-forgot-password-otp', { email, otp }),
+  
+    resetPassword: (email: string, otp: string, newPassword: string, confirmPassword: string) =>
+    api.post<{ message: string }>('/api/auth/reset-password', { email, otp, newPassword, confirmPassword }),
+
   getCurrentUser: () =>
     api.get<User>('/api/auth/me'),
+};
+
+export const couponAPI = {
+  validateCoupon: (code: string, amount: number) =>
+    api.post<{ valid: boolean; discount: number; message: string }>('/api/coupons/validate', { code, amount }),
+
+  getActiveCoupons: () =>
+    api.get<Coupon[]>('/api/coupons/active'),
+    
+  // Admin endpoints
+  getAllCoupons: () =>
+    api.get<Coupon[]>('/admin/coupons'),
+    
+  createCoupon: (coupon: Omit<Coupon, 'id' | 'currentUsage' | 'createdAt' | 'updatedAt'>) =>
+    api.post<Coupon>('/admin/coupons', coupon),
+    
+  updateCoupon: (id: number, coupon: Partial<Coupon>) =>
+    api.put<Coupon>(`/admin/coupons/${id}`, coupon),
+    
+  deleteCoupon: (id: number) =>
+    api.delete(`/admin/coupons/${id}`),
 };
 
 // Projects API
@@ -118,8 +149,30 @@ export const projectsAPI = {
 
 // Subscriptions API
 export const subscriptionsAPI = {
-  subscribeToProject: (projectId: number) =>
-    api.post<{ success: boolean; message: string; projectName: string; amount: number; newBalance: number }>('/api/subscriptions', null, {
+  testSubscription: (projectId: number, contributionAmount: number, couponCode?: string) =>
+    api.post('/api/subscriptions/test', {
+      couponCode: couponCode,
+      contributionAmount: contributionAmount,
+      subscriptionType: "FLEXIBLE"
+    }, {
+      params: { projectId }
+    }),
+
+  testSubscriptionWithAuth: (projectId: number, contributionAmount: number, couponCode?: string) =>
+    api.post('/api/subscriptions/test-auth', {
+      couponCode: couponCode,
+      contributionAmount: contributionAmount,
+      subscriptionType: "FLEXIBLE"
+    }, {
+      params: { projectId }
+    }),
+
+  subscribeToProject: (projectId: number, contributionAmount: number, couponCode?: string) =>
+    api.post<{ success: boolean; message: string; projectName: string; amount: number; originalAmount: number; discountAmount: number; appliedCoupon: string | null; newBalance: number }>('/api/subscriptions', {
+      couponCode: couponCode,
+      contributionAmount: contributionAmount,
+      subscriptionType: "FLEXIBLE"
+    }, {
       params: { projectId }
     }),
   
@@ -191,6 +244,9 @@ export const kycAPI = {
 
 // Admin API
 export const adminAPI = {
+  login: (data: { email: string; password: string }) =>
+    api.post<{ token: string; user: User }>('/admin/login', data),
+  
   getDashboardStats: () =>
     api.get<DashboardStats>('/admin/dashboard/stats'),
   
@@ -299,5 +355,6 @@ export const earningsAPI = {
   getEarningsByPeriod: (period: 'month' | 'quarter' | 'year') =>
     api.get<any>(`/api/earnings/period/${period}`),
 };
+
 
 export default api; 
