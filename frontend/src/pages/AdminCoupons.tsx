@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Coupon } from '../types';
+import api from '../services/api';
 
 const AdminCoupons: React.FC = () => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -42,9 +43,8 @@ const AdminCoupons: React.FC = () => {
 
   const fetchCoupons = async () => {
     try {
-      const response = await fetch('/api/admin/coupons');
-      const data = await response.json();
-      setCoupons(data);
+      const response = await api.get('/api/admin/coupons');
+      setCoupons(response.data);
     } catch (error) {
       toast.error('Failed to fetch coupons');
     } finally {
@@ -62,23 +62,17 @@ const AdminCoupons: React.FC = () => {
       
       const method = editingCoupon ? 'PUT' : 'POST';
       
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        toast.success(editingCoupon ? 'Coupon updated successfully' : 'Coupon created successfully');
-        setShowModal(false);
-        resetForm();
-        fetchCoupons();
+      let response;
+      if (editingCoupon) {
+        response = await api.put(`/api/admin/coupons/${editingCoupon.id}`, formData);
       } else {
-        const error = await response.text();
-        toast.error(error);
+        response = await api.post('/api/admin/coupons', formData);
       }
+
+      toast.success(editingCoupon ? 'Coupon updated successfully' : 'Coupon created successfully');
+      setShowModal(false);
+      resetForm();
+      fetchCoupons();
     } catch (error) {
       toast.error('Failed to save coupon');
     }
@@ -90,16 +84,9 @@ const AdminCoupons: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/admin/coupons/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        toast.success('Coupon deleted successfully');
-        fetchCoupons();
-      } else {
-        toast.error('Failed to delete coupon');
-      }
+      await api.delete(`/api/admin/coupons/${id}`);
+      toast.success('Coupon deleted successfully');
+      fetchCoupons();
     } catch (error) {
       toast.error('Failed to delete coupon');
     }
