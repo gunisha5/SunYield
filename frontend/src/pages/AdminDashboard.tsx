@@ -19,7 +19,8 @@ import {
   Tag
 } from 'lucide-react';
 import ProjectImageUpload from '../components/ProjectImageUpload';
-import { adminAPI, couponAPI, api } from '../services/api';
+import { adminAPI, couponAPI } from '../services/api';
+import api from '../services/api';
 import { DashboardStats, User, Project, KYC, Coupon } from '../types';
 
 interface KYCData {
