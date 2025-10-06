@@ -69,7 +69,7 @@ const MockPayment: React.FC = () => {
         // Handle wallet payment
         if (isSuccess) {
           // Process the payment to add funds to wallet
-          const response = await fetch(`http://localhost:8080/api/wallet/add-funds/process-payment?orderId=${paymentData.orderId}`, {
+          const response = await fetch(`/api/wallet/add-funds/process-payment?orderId=${paymentData.orderId}`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -91,7 +91,7 @@ const MockPayment: React.FC = () => {
         }
       } else {
         // Handle subscription payment
-        const response = await fetch(`http://localhost:8080/api/subscriptions/webhook?orderId=${paymentData.orderId}&status=${isSuccess ? 'SUCCESS' : 'FAILED'}`);
+        const response = await fetch(`/api/subscriptions/webhook?orderId=${paymentData.orderId}&status=${isSuccess ? 'SUCCESS' : 'FAILED'}`);
         
         if (response.ok) {
           if (isSuccess) {

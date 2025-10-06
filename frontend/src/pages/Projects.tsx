@@ -91,7 +91,7 @@ const Projects: React.FC = () => {
                 <div className="project-image relative overflow-hidden">
                   {project.imageUrl ? (
                     <img 
-                      src={`http://localhost:8080/api/projects/images/${project.imageUrl.split('/').pop()}`}
+                      src={`/api/projects/images/${project.imageUrl.split('/').pop()}`}
                       alt={project.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       onError={(e) => {

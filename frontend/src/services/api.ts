@@ -131,16 +131,16 @@ export const projectsAPI = {
     api.get<Project[]>('/api/projects/active'),
   
   createProject: (project: Omit<Project, 'id'>) =>
-    api.post<Project>('/api/projects/admin', project),
+    api.post<Project>('/api/admin/projects', project),
   
   updateProject: (id: number, project: Partial<Project>) =>
-    api.put<Project>(`/api/projects/admin/${id}`, project),
+    api.put<Project>(`/api/admin/projects/${id}`, project),
   
   pauseProject: (id: number) =>
-    api.patch<Project>(`/api/projects/admin/${id}/pause`),
+    api.patch<Project>(`/api/admin/projects/${id}/pause`),
   
   uploadProjectImage: (projectId: number, formData: FormData) =>
-    api.post<string>(`/api/projects/admin/${projectId}/image`, formData, {
+    api.post<string>(`/api/admin/projects/${projectId}/image`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

@@ -168,25 +168,11 @@ const AdminDashboard: React.FC = () => {
 
   const updateMonthlyWithdrawalCap = async (newCap: number) => {
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:8080/api/admin/config/monthly-withdrawal-cap', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ amount: newCap }),
-      });
+      const response = await api.post('/api/admin/config/monthly-withdrawal-cap', { amount: newCap });
 
-      if (response.ok) {
-        const result = await response.text();
-        toast.success(result || 'Monthly withdrawal cap updated successfully!');
-        setMonthlyWithdrawalCap(newCap);
-        setShowConfigModal(false);
-      } else {
-        const error = await response.text();
-        toast.error(error || 'Failed to update monthly withdrawal cap');
-      }
+      toast.success('Monthly withdrawal cap updated successfully!');
+      setMonthlyWithdrawalCap(newCap);
+      setShowConfigModal(false);
     } catch (error) {
       console.error('Error updating monthly withdrawal cap:', error);
       toast.error('Failed to update monthly withdrawal cap');
@@ -195,22 +181,10 @@ const AdminDashboard: React.FC = () => {
 
   const approveKyc = async (kycId: number) => {
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/api/admin/kyc/${kycId}/approve`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await api.post(`/api/admin/kyc/${kycId}/approve`);
 
-      if (response.ok) {
-        toast.success('KYC approved successfully!');
-        fetchKycData();
-      } else {
-        const error = await response.text();
-        toast.error(error || 'Failed to approve KYC');
-      }
+      toast.success('KYC approved successfully!');
+      fetchKycData();
     } catch (error) {
       console.error('Error approving KYC:', error);
       toast.error('Failed to approve KYC');
@@ -219,23 +193,10 @@ const AdminDashboard: React.FC = () => {
 
   const rejectKyc = async (kycId: number) => {
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/api/admin/kyc/${kycId}/reject`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ notes: 'KYC rejected by admin' }),
-      });
+      const response = await api.post(`/api/admin/kyc/${kycId}/reject`, { notes: 'KYC rejected by admin' });
 
-      if (response.ok) {
-        toast.success('KYC rejected successfully!');
-        fetchKycData();
-      } else {
-        const error = await response.text();
-        toast.error(error || 'Failed to reject KYC');
-      }
+      toast.success('KYC rejected successfully!');
+      fetchKycData();
     } catch (error) {
       console.error('Error rejecting KYC:', error);
       toast.error('Failed to reject KYC');
@@ -244,23 +205,10 @@ const AdminDashboard: React.FC = () => {
 
   const updateUserRole = async (userId: number, newRole: 'USER' | 'ADMIN') => {
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/api/admin/users/${userId}/role`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ role: newRole }),
-      });
+      const response = await api.put(`/api/admin/users/${userId}/role`, { role: newRole });
 
-      if (response.ok) {
-        toast.success('User role updated successfully!');
-        fetchUsers();
-      } else {
-        const error = await response.text();
-        toast.error(error || 'Failed to update user role');
-      }
+      toast.success('User role updated successfully!');
+      fetchUsers();
     } catch (error) {
       console.error('Error updating user role:', error);
       toast.error('Failed to update user role');
@@ -340,22 +288,10 @@ const AdminDashboard: React.FC = () => {
 
   const approvePayment = async (orderId: string) => {
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/api/admin/subscriptions/${orderId}/approve`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await api.post(`/api/admin/subscriptions/${orderId}/approve`);
 
-      if (response.ok) {
-        toast.success('Payment approved successfully!');
-        fetchPendingPayments();
-      } else {
-        const error = await response.text();
-        toast.error(error || 'Failed to approve payment');
-      }
+      toast.success('Payment approved successfully!');
+      fetchPendingPayments();
     } catch (error) {
       console.error('Error approving payment:', error);
       toast.error('Failed to approve payment');
@@ -364,22 +300,10 @@ const AdminDashboard: React.FC = () => {
 
   const rejectPayment = async (orderId: string) => {
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/api/admin/subscriptions/${orderId}/reject`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await api.post(`/api/admin/subscriptions/${orderId}/reject`);
 
-      if (response.ok) {
-        toast.success('Payment rejected successfully!');
-        fetchPendingPayments();
-      } else {
-        const error = await response.text();
-        toast.error(error || 'Failed to reject payment');
-      }
+      toast.success('Payment rejected successfully!');
+      fetchPendingPayments();
     } catch (error) {
       console.error('Error rejecting payment:', error);
       toast.error('Failed to reject payment');
@@ -388,25 +312,12 @@ const AdminDashboard: React.FC = () => {
 
   const addCreditsToUser = async (userId: number, amount: number) => {
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/api/admin/users/${userId}/add-credits`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          amount: amount,
-          notes: 'Credits added by admin'
-        }),
+      const response = await api.post(`/api/admin/users/${userId}/add-credits`, { 
+        amount: amount,
+        notes: 'Credits added by admin'
       });
 
-      if (response.ok) {
-        toast.success('Credits added successfully!');
-      } else {
-        const error = await response.text();
-        toast.error(error || 'Failed to add credits');
-      }
+      toast.success('Credits added successfully!');
     } catch (error) {
       console.error('Error adding credits:', error);
       toast.error('Failed to add credits');
@@ -415,28 +326,14 @@ const AdminDashboard: React.FC = () => {
 
   const addEnergyToProject = async (projectId: number, energyAmount: number) => {
     try {
-      const adminToken = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:8080/api/projects/admin/${projectId}/add-energy`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${adminToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          energyProduced: energyAmount,
-          date: new Date().toISOString().split('T')[0] // Send only the date part (YYYY-MM-DD)
-        }),
+      const response = await api.post(`/api/admin/projects/${projectId}/add-energy`, {
+        energyProduced: energyAmount,
+        date: new Date().toISOString().split('T')[0] // Send only the date part (YYYY-MM-DD)
       });
 
-      if (response.ok) {
-        const result = await response.text();
-        toast.success(result || 'Energy data added successfully!');
-        // Refresh projects data to show updated information
-        fetchProjects();
-      } else {
-        const error = await response.text();
-        toast.error(error || 'Failed to add energy data');
-      }
+      toast.success('Energy data added successfully!');
+      // Refresh projects data to show updated information
+      fetchProjects();
     } catch (error) {
       console.error('Error adding energy data:', error);
       toast.error('Failed to add energy data');
